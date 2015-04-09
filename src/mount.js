@@ -21,7 +21,7 @@ function createDomEventStream(eventType,handler,useCapture){
 module.exports = function mount(el,n){
 	var delegate = new DomDelegate(el);
 	var api = {
-		stream: createDomEventStream.bind(delegate)
+		event: createDomEventStream.bind(delegate)
 	};
 	m.mount(el,ContainerComponent(api,n));
 	return api;

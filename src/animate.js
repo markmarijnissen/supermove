@@ -9,7 +9,7 @@ function step(time){
 			if(!callbacks[i].start) {
 				callbacks[i].start = time;
 			} 
-			if(callbacks[i].duration && time - callbacks[i].start > callbacks[i].duration){
+			if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
 				callbacks[i](1);
 				unsubscribe(callbacks[i]);
 			} else {
@@ -25,7 +25,7 @@ function createSubscribe(duration){
 	return function subscribe(callback){
 		var index = callbacks.length;
 		callbacks.push(callback);
-		callback.duration = duration || false;
+		callback.duration = duration || 1;
 		if(index === 0) window.requestAnimationFrame(step);
 	};
 }

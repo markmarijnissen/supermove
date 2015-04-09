@@ -5,6 +5,7 @@ function SurfaceController(){
 	this.matrix = mat4.create();
 	this.data = {
 		id: '',
+		element: '.supermove-surface',
 		show: false,
 		width: 0,
 		height: 0,
@@ -20,21 +21,46 @@ function SurfaceController(){
 		content: ''
 	};
 	this.style = "display: none;";
-	this.update = this.update.bind(this);
 }
 
-SurfaceController.prototype.update = function(d){
+SurfaceController.prototype.set = function(d){
 	for(var key in this.data){
 		if(typeof d[key] !== 'undefined'){
 			this.data[key] = d[key];
 		}
 	}
+	if(d.element){
+		this.data.element = d.element + '.supermove-surface';
+	}
+	this.setStyle();
+};
+
+SurfaceController.prototype.inc = function(d){
+	for(var key in this.data){
+		if(typeof d[key] === 'number' && key !== 'id'){
+			this.data[key] += d[key];
+		} 
+	}
+	if(d.origin){
+		this.data.origin[0] += d.origin[0];
+		this.data.origin[1] += d.origin[1];
+		this.data.origin[2] += d.origin[2];
+	}
+	if(d.scale){
+		this.data.scale[0] += d.scale[0];
+		this.data.scale[1] += d.scale[1];
+		this.data.scale[2] += d.scale[2];
+	}
+	this.setStyle();
+};
+
+
+SurfaceController.prototype.setStyle = function(){
 	if(this.data.show === false){
 		this.style = "display: none;";
 		return;
 	}
-	d = this.data;
-	var m = this.matrix;
+	var m = this.matrix, d = this.data;
 	if(d.opacity >= 1) d.opacity = 0.99999;
 	else if(d.opacity <= 0) d.opacity = 0.00001;
 	this.style = "opacity: "+d.opacity+"; ";
@@ -48,34 +74,45 @@ SurfaceController.prototype.update = function(d){
 	mat4.scale(m,m,d.scale);
 	
 	if(d.width){
-		this.style += 'width: '+width+'; ';
+		this.style += 'width: '+d.width+'; ';
 	}
 	if(d.height){
-		this.style += 'height: '+height+'; ';
+		this.style += 'height: '+d.height+'; ';
 	}
 	this.style += 'transform-origin: '+(d.origin[0] * 100)+'% '+(d.origin[1] * 100)+'% 0px; ';
 	this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 };
 
 function SurfaceView(ctrl){
-	return m('.supermove-surface',{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id },ctrl.data.content);
+	return m(ctrl.data.element,{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id },ctrl.data.content);
 }
 
-
-function ContainerUpdate(datas){
-	for(var data,j,i = 0, datalen = datas.length,surflen = this.surfaces.length; i < datalen; i++){
-		data = datas[i];
-		j = this._idToIndex[data.id];
-		if(typeof j === 'undefined') {
-			j = 0;
-			while(j < surflen && this.surfaces[j].data.show === true) j++;
-			if(j === surflen) {
-				this.surfaces.push(new SurfaceController());
-			}
-			this._idToIndex[data.id] = j;
+function ContainerIndex(id){
+	var index = this._idToIndex[id], surflen = this.surfaces.length;
+	if(typeof index === 'undefined') {
+		index = 0;
+		while(index < surflen && this.surfaces[index].data.show === true) index++;
+		if(index === surflen) {
+			this.surfaces.push(new SurfaceController());
 		}
-		this.surfaces[j].update(data);
+		this._idToIndex[id] = index;
 	}
+	return index;
+}
+
+function ContainerGet(id){
+	var index = ContainerIndex.call(this,id);
+	return this.surfaces[index].data;
+}
+
+function ContainerRender(data){
+	index = ContainerIndex.call(this,data.id);
+	this.surfaces[index].set(data);
+}
+
+function ContainerInc(data){
+	index = ContainerIndex.call(this,data.id);
+	this.surfaces[index].inc(data);
 }
 
 module.exports = m.component({
@@ -86,7 +123,9 @@ module.exports = m.component({
 		for(var i = 0; i<n; i++){
 			this.surfaces[i] = new SurfaceController();
 		}
-		api.update = ContainerUpdate.bind(this);
+		api.render = ContainerRender.bind(this);
+		api.inc = ContainerInc.bind(this);
+		api.element = ContainerGet.bind(this);
 	},
 	view: function ContainerView(ctrl){
 		return m('.supermove-container',ctrl.surfaces.map(SurfaceView));

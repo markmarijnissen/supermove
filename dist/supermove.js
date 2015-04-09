@@ -44,10 +44,12 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Supermove = {
-		animate: __webpack_require__(1),
-		mount: __webpack_require__(2)
-	};
+	var Kefir = __webpack_require__(8);
+
+	var Supermove = __webpack_require__(2);
+	Supermove.animate = __webpack_require__(1);
+	Supermove.resize = __webpack_require__(15);
+	Supermove.tween = __webpack_require__(16);
 
 	if(typeof window !== 'undefined'){
 		__webpack_require__(4);
@@ -73,7 +75,7 @@
 				if(!callbacks[i].start) {
 					callbacks[i].start = time;
 				} 
-				if(callbacks[i].duration && time - callbacks[i].start > callbacks[i].duration){
+				if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
 					callbacks[i](1);
 					unsubscribe(callbacks[i]);
 				} else {
@@ -89,7 +91,7 @@
 		return function subscribe(callback){
 			var index = callbacks.length;
 			callbacks.push(callback);
-			callback.duration = duration || false;
+			callback.duration = duration || 1;
 			if(index === 0) window.requestAnimationFrame(step);
 		};
 	}
@@ -130,7 +132,7 @@
 	module.exports = function mount(el,n){
 		var delegate = new DomDelegate(el);
 		var api = {
-			stream: createDomEventStream.bind(delegate)
+			event: createDomEventStream.bind(delegate)
 		};
 		m.mount(el,ContainerComponent(api,n));
 		return api;
@@ -1329,6 +1331,7 @@
 		this.matrix = mat4.create();
 		this.data = {
 			id: '',
+			element: '.supermove-surface',
 			show: false,
 			width: 0,
 			height: 0,
@@ -1344,21 +1347,46 @@
 			content: ''
 		};
 		this.style = "display: none;";
-		this.update = this.update.bind(this);
 	}
 
-	SurfaceController.prototype.update = function(d){
+	SurfaceController.prototype.set = function(d){
 		for(var key in this.data){
 			if(typeof d[key] !== 'undefined'){
 				this.data[key] = d[key];
 			}
 		}
+		if(d.element){
+			this.data.element = d.element + '.supermove-surface';
+		}
+		this.setStyle();
+	};
+
+	SurfaceController.prototype.inc = function(d){
+		for(var key in this.data){
+			if(typeof d[key] === 'number' && key !== 'id'){
+				this.data[key] += d[key];
+			} 
+		}
+		if(d.origin){
+			this.data.origin[0] += d.origin[0];
+			this.data.origin[1] += d.origin[1];
+			this.data.origin[2] += d.origin[2];
+		}
+		if(d.scale){
+			this.data.scale[0] += d.scale[0];
+			this.data.scale[1] += d.scale[1];
+			this.data.scale[2] += d.scale[2];
+		}
+		this.setStyle();
+	};
+
+
+	SurfaceController.prototype.setStyle = function(){
 		if(this.data.show === false){
 			this.style = "display: none;";
 			return;
 		}
-		d = this.data;
-		var m = this.matrix;
+		var m = this.matrix, d = this.data;
 		if(d.opacity >= 1) d.opacity = 0.99999;
 		else if(d.opacity <= 0) d.opacity = 0.00001;
 		this.style = "opacity: "+d.opacity+"; ";
@@ -1372,34 +1400,45 @@
 		mat4.scale(m,m,d.scale);
 		
 		if(d.width){
-			this.style += 'width: '+width+'; ';
+			this.style += 'width: '+d.width+'; ';
 		}
 		if(d.height){
-			this.style += 'height: '+height+'; ';
+			this.style += 'height: '+d.height+'; ';
 		}
 		this.style += 'transform-origin: '+(d.origin[0] * 100)+'% '+(d.origin[1] * 100)+'% 0px; ';
 		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 	};
 
 	function SurfaceView(ctrl){
-		return m('.supermove-surface',{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id },ctrl.data.content);
+		return m(ctrl.data.element,{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id },ctrl.data.content);
 	}
 
-
-	function ContainerUpdate(datas){
-		for(var data,j,i = 0, datalen = datas.length,surflen = this.surfaces.length; i < datalen; i++){
-			data = datas[i];
-			j = this._idToIndex[data.id];
-			if(typeof j === 'undefined') {
-				j = 0;
-				while(j < surflen && this.surfaces[j].data.show === true) j++;
-				if(j === surflen) {
-					this.surfaces.push(new SurfaceController());
-				}
-				this._idToIndex[data.id] = j;
+	function ContainerIndex(id){
+		var index = this._idToIndex[id], surflen = this.surfaces.length;
+		if(typeof index === 'undefined') {
+			index = 0;
+			while(index < surflen && this.surfaces[index].data.show === true) index++;
+			if(index === surflen) {
+				this.surfaces.push(new SurfaceController());
 			}
-			this.surfaces[j].update(data);
+			this._idToIndex[id] = index;
 		}
+		return index;
+	}
+
+	function ContainerGet(id){
+		var index = ContainerIndex.call(this,id);
+		return this.surfaces[index].data;
+	}
+
+	function ContainerRender(data){
+		index = ContainerIndex.call(this,data.id);
+		this.surfaces[index].set(data);
+	}
+
+	function ContainerInc(data){
+		index = ContainerIndex.call(this,data.id);
+		this.surfaces[index].inc(data);
 	}
 
 	module.exports = m.component({
@@ -1410,7 +1449,9 @@
 			for(var i = 0; i<n; i++){
 				this.surfaces[i] = new SurfaceController();
 			}
-			api.update = ContainerUpdate.bind(this);
+			api.render = ContainerRender.bind(this);
+			api.inc = ContainerInc.bind(this);
+			api.element = ContainerGet.bind(this);
 		},
 		view: function ContainerView(ctrl){
 			return m('.supermove-container',ctrl.surfaces.map(SurfaceView));
@@ -9159,6 +9200,39 @@
 	Delegate.prototype.destroy = function() {
 	  this.off();
 	  this.root();
+	};
+
+
+/***/ },
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Kefir = __webpack_require__(8);
+
+	module.exports = Kefir.fromEvent(window,'resize')
+		.map(function(event){
+			return [event.target.innerWidth,event.target.innerHeight];
+		})
+		.toProperty([window.innerWidth,window.innerHeight]);
+
+/***/ },
+/* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function tween(start,end,time){
+		if(typeof time === 'undefined') {
+			return tween.bind(null,start,end);
+		} else if(typeof start === 'object'){
+			var data = {};
+			for(var key in start){
+				data[key] = tween(start[key],end[key],time);
+			}
+			return data;
+		} else if(typeof start === 'number'){
+			return start + (end - start) * time;
+		} else {
+			return start;
+		}
 	};
 
 
