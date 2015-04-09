@@ -7,6 +7,14 @@
     "prepubish":"webpack --optimize-minimize",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markmarijnissen/supermove.git"
+  },
+  "bugs": {
+    "url": "https://github.com/markmarijnissen/supermove/issues"
+  },
+  "homepage": "https://github.com/markmarijnissen/supermove",
   "author": "Mark Marijnissen",
   "license": "MIT",
   "keywords":["famo.us","mithril","kefir","layout","virtual dom","rendering"],
