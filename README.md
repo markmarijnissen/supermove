@@ -112,7 +112,7 @@ Supermove.animate(500); // return Stream. 0 = forever
 	})
 
 // Stream with window size:
-Supermove.resize();
+Supermove.resize;
 
 // Tween between two specs
 Supermove.tween(startSpec,endSpec,t); // return tweened spec at time t.
