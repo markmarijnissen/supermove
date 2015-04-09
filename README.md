@@ -2,8 +2,7 @@ Supermove
 ---------
 > A functional reactive virtual DOM layout engine, powered by Mithril and Kefir.
 
-Experimental work in progress. !!!!
-
+## Experimental work in progress !!
 
 Inspired by the best ideas out there:
 
@@ -11,15 +10,14 @@ Inspired by the best ideas out there:
 	* Flat DOM
 	* CSS3 matrix3d transformation to position elements
 	* Cache DOM nodes
-
-* Layout speficiation (inspired by famo.us & snabbt.js)
+* Layout speciciation (inspired by famo.us & snabbt.js)
 * Model/View/Intent (inspired by CycleJS)
 * Functional reactive programming (Supermove uses Kefir)
 * Virtual DOM (Supermove uses Mithril)
 
 Example: Open `index.html` and see `test.js`
 
-### Idea
+## Idea
 
 Data flows unidirectionally: 
 
@@ -30,7 +28,7 @@ Data flows unidirectionally:
 	* Merge inputs: `Kefir.combine([a,b,c], function(a,b,c) { .... })`
 	* map, filter, reduce, etc
 	* map to `layout-specification` data
-3. View = Subscribe to Layout-Spefication stream.
+3. View = Subscribe to Layout-Specification stream.
 
 ## Usage
 
@@ -60,7 +58,7 @@ var modelStream =
 		});
 ```
 
-The stream should deliver an array with Layout-Specification:
+The stream should deliver a Layout-Specification:
 ```javascript
 var specs = [
 	{
@@ -84,6 +82,8 @@ var specs = [
 	...
 ]
 ```
+
+Hint: To update multiple elements, emit an array of layout-specification events and then call `flatten()`.
 
 ### Views
 
