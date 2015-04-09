@@ -63,6 +63,7 @@ The stream should deliver a Layout-Specification:
 var specs = [
 	{
 		id: 'submit',			// required unique ID for element
+		element: '.text.class'  // mithril' virtual DOM element for wrapper surface.
 		show: false,	
 		width: 0,		
 		height: 0,
