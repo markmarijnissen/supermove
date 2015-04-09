@@ -189,6 +189,7 @@ What does Supermove add?
 
 TODO
 
+* How to work with conflicting things, i.e. scale, add/remove classes? add/remove content?
 * remove gl-matrix dependency in favor of smaller subset of functions for matrix algebra
 * Easing functions
 * Set supermove-root (see famo.us?)

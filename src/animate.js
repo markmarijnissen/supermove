@@ -5,7 +5,7 @@ var callbacks = [];
 function step(time){
 	var len = callbacks.length;
 	if(len > 0){
-		for(var i = 0; i < len; i++){
+		for(var i = len-1; i >= 0; i--){
 			if(!callbacks[i].start) {
 				callbacks[i].start = time;
 			} 

@@ -33,9 +33,9 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 				width: '200px',
 				height: '20px',
 				//rotateZ:(Math.round(time * 2 * Math.PI * 1000) / 1000) % (2 * Math.PI),
-				x:size[0] * 0.5,
+				x: time * size[0] - 100,
 				y: size[1] * 0.5 + ((id - 1.5) * 50),
-				scale: [0.5 + 2*time,0.5 + 2*time,1],
+				//scale: [0.5 + 2*time,0.5 + 2*time,1],
 				//z: (Math.round(i * 200) / 1000) % 500,
 				content: text
 			};
@@ -43,6 +43,10 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 	})
 	.flatten()
 	.onValue(move.render);
+
+// var btn1 = Button(move,1).onValue(move.render);
+// var btn2 = Button(move,2).onValue(move.render);
+// var btn3 = Button(move,3).onValue(move.render);
 
 // rotation incremental
 move.event('click','#1')
@@ -52,14 +56,15 @@ move.event('click','#1')
 	.map(function(){
 		return {
 			id: 1,
-			rotateY: Math.PI * 0.01
+			rotateY: 0.01
 		};
 	})
-	.onValue(move.inc);
+	.onValue(move.modify);
 
 // rotation fixed from 0 ... PI
 move.event('click','#2')
 	.flatMapLatest(function(){
+		console.log('click #2');
 		return Supermove.animate(500);
 	})
     .map(Supermove.tween(

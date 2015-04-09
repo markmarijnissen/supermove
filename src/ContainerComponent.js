@@ -1,4 +1,5 @@
 var mat4 = require('gl-matrix').mat4;
+var extend = require('./extend');
 var m = require('../lib/mithril');
 
 function SurfaceController(){
@@ -15,54 +16,59 @@ function SurfaceController(){
 		x: 0,
 		y: 0,
 		z: 0,
-		origin: [0.5, 0.5],
-		scale: [1,1,1],
+		originX: 0.5,
+		originY: 0.5,
+		scaleX: 1,
+		scaleY: 1,
+		scaleZ: 1,
 		opacity: 1,
-		content: ''
+		content: '',
+		modifiers: {}
 	};
 	this.style = "display: none;";
 }
 
 SurfaceController.prototype.set = function(d){
-	for(var key in this.data){
-		if(typeof d[key] !== 'undefined'){
-			this.data[key] = d[key];
-		}
-	}
-	if(d.element){
-		this.data.element = d.element + '.supermove-surface';
+	//this.data = extend(this.data,d);
+	for(var key in d){
+		this.data[key] = d[key];
 	}
 	this.setStyle();
 };
 
-SurfaceController.prototype.inc = function(d){
-	for(var key in this.data){
-		if(typeof d[key] === 'number' && key !== 'id'){
-			this.data[key] += d[key];
-		} 
+function getNum(data,key){
+	var val = data[key];
+	for(var i in data.modifiers){
+		val += data.modifiers[i][key] || 0;
 	}
-	if(d.origin){
-		this.data.origin[0] += d.origin[0];
-		this.data.origin[1] += d.origin[1];
-		this.data.origin[2] += d.origin[2];
-	}
-	if(d.scale){
-		this.data.scale[0] += d.scale[0];
-		this.data.scale[1] += d.scale[1];
-		this.data.scale[2] += d.scale[2];
-	}
-	this.setStyle();
-};
+	return val;
+}
 
+function getStr(data,key){
+	var val = data[key];
+	for(var i in data.modifiers){
+		val += data.modifiers[i][key] || '';
+	}
+	return val;
+}
+
+function getAnd(data,key){
+	var val = data[key];
+	for(var i in data.modifiers){
+		val = val && data.modifiers[i][key];
+	}
+	return val;
+}
 
 SurfaceController.prototype.setStyle = function(){
-	if(this.data.show === false){
+	var m = this.matrix, d = this.data;
+	if(getAnd(d,'show') === false){
 		this.style = "display: none;";
 		return;
 	}
-	var m = this.matrix, d = this.data;
-	if(d.opacity >= 1) d.opacity = 0.99999;
-	else if(d.opacity <= 0) d.opacity = 0.00001; 
+	var opacity = getNum(d,'opacity');
+	if(opacity >= 1) opacity = 0.99999;
+	else if(d.opacity <= 0) opacity = 0.00001; 
 	// opacity is very low, otherwise Chrome will not render
 	// which can unpredicted cause flickering / rendering lag
 	// 
@@ -72,15 +78,15 @@ SurfaceController.prototype.setStyle = function(){
 	// 
 	// If you want to cleanup the node, set `show` to false
 	//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
-	this.style = "opacity: "+d.opacity+"; ";
+	this.style = "opacity: "+opacity+"; ";
 
 	mat4.identity(m);
-	mat4.translate(m,m,[d.x,d.y,d.z]);
-	if(d.rotateX) mat4.rotateX(m,m,d.rotateX);
-	if(d.rotateY) mat4.rotateY(m,m,d.rotateY);
-	if(d.rotateZ) mat4.rotateZ(m,m,d.rotateZ);
+	mat4.translate(m,m,[getNum(d,'x'),getNum(d,'y'),getNum(d,'z')]);
+	if(d.rotateX) mat4.rotateX(m,m,getNum(d,'rotateX'));
+	if(d.rotateY) mat4.rotateY(m,m,getNum(d,'rotateY'));
+	if(d.rotateZ) mat4.rotateZ(m,m,getNum(d,'rotateZ'));
 
-	mat4.scale(m,m,d.scale);
+	mat4.scale(m,m,[getNum(d,'scaleX'),getNum(d,'scaleY'),getNum(d,'scaleZ')]);
 	
 	if(d.width){
 		this.style += 'width: '+d.width+'; ';
@@ -88,7 +94,7 @@ SurfaceController.prototype.setStyle = function(){
 	if(d.height){
 		this.style += 'height: '+d.height+'; ';
 	}
-	this.style += 'transform-origin: '+(d.origin[0] * 100)+'% '+(d.origin[1] * 100)+'% 0px; ';
+	this.style += 'transform-origin: '+(getNum(d,'originX') * 100)+'% '+(getNum(d,'originY') * 100)+'% 0px; ';
 	this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 };
 
@@ -119,14 +125,21 @@ function ContainerGet(id){
 }
 
 function ContainerRender(data){
-	index = ContainerIndex.call(this,data.id);
+	var index = ContainerIndex.call(this,data.id);
 	this.surfaces[index].set(data);
 }
 
-function ContainerInc(data){
-	index = ContainerIndex.call(this,data.id);
-	this.surfaces[index].inc(data);
+function CreateContainerModify(modifier){
+	return function ContainerModify(data){
+		var index = ContainerIndex.call(this,data.id);
+		this.surfaces[index].data.modifiers[modifier] = data;
+	}.bind(this);
 }
+
+// function ContainerInc(data){
+// 	index = ContainerIndex.call(this,data.id);
+// 	this.surfaces[index].inc(data);
+// }
 
 module.exports = m.component({
 	controller: function ContainerController(api,n){
@@ -137,7 +150,8 @@ module.exports = m.component({
 			this.surfaces[i] = new SurfaceController();
 		}
 		api.render = ContainerRender.bind(this);
-		api.inc = ContainerInc.bind(this);
+		//api.inc = ContainerInc.bind(this);
+		api.modify = CreateContainerModify.bind(this);
 		api.element = ContainerGet.bind(this);
 	},
 	view: function ContainerView(ctrl){
