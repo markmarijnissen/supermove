@@ -88,4 +88,27 @@ move.event('click','#4')
 		animator.emit(1000);
 	});
 
+// Relative Sizing example
+Supermove.resize
+	.map(function(size){
+		return {
+			id: 'parent',
+			show: true,
+			content: 'Parent',
+			y: (size[1] * 0.5)
+		};
+	})
+	.onValue(move.render);
+
+Supermove.resize
+	.map(function(){
+		return {
+			id: 'child',
+			show: true,
+			content: 'Child',
+			y: move.element('parent').y + 100
+		};
+	})
+	.onValue(move.render);
+
 animator.emit(1000);

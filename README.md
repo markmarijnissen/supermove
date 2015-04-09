@@ -46,20 +46,6 @@ Create Intent (Stream of DOM Events)
 var submitIntent = move.stream('click','#submit')
 ```
 
-Or create animations:
-```javascript
-var animationStream = Supermove.animate(2000) // 0 = infinite
-	.onValue(function(time){
-		// time from [0...1] (with duration)
-		// time in seconds (without duration)
-	})
-```
-
-Or window size:
-```javascript
-Supermove.resize()
-```
-
 ### Models
 
 Create Models (Transform Intent to Layout-Speficiation)
@@ -103,7 +89,62 @@ var specs = [
 
 Simply subscribe a supermove instance to a Layout-Specification stream to update view:
 ```javascript
-	modelStream.onValue(move.update)
+	# render as specified in spec-data from event.
+	modelStream.onValue(move.render)
+
+	# increment numeric values of current spec with spec data from event.
+	modelStream.onValue(move.inc)
+```
+
+### Helpers
+
+```javascript
+// Stream based on requestAnimationFrame
+Supermove.animate(500); // return Stream. 0 = forever
+	.onValue(function(time){
+		// time from [0...1] (with duration)
+		// time in seconds (without duration)
+	})
+
+// Stream with window size:
+Supermove.resize();
+
+// Tween between two specs
+Supermove.tween(startSpec,endSpec,t); // return tweened spec at time t.
+Supermove.tween(startSpec,endSpec) // return function(time) {... }
+
+// Combine Animation with Tween like this:
+Supermove
+	.animate(500)
+	.map(Supermove.tween(start,end)) // Stream with tweening spec
+	.onValue(move.render)
+
+// Get Layout-Specification (for relative positioning and sizing)
+move.element('parent') // returns Layout-Specification
+
+// Relative Sizing example
+Supermove.resize
+	.map(function(size){
+		return {
+			id: 'parent',
+			show: true,
+			content: 'Parent',
+			y: (size[1] * 0.5)
+		};
+	})
+	.onValue(move.render);
+
+Supermove.resize
+	.map(function(){
+		return {
+			id: 'child',
+			show: true,
+			content: 'Child',
+			y: move.element('parent').y + 100
+		};
+	})
+	.onValue(move.render);
+
 ```
 
 ## What does Supermove do?
@@ -119,15 +160,10 @@ What does Supermove add?
 * DOM Event Streams: Supermove adds DOM Event Delegation to Mithril and converts events into a Kefir Stream: `move.event(eventType,selector)`
 * Animation Stream: `Supermove.animate(duration)`
 * Window size Stream: `Supermove.resize()`
-* Tween Layout-Specifications: `Supermove.tween(start,end)`
-	* Returns a function(time){} where time = [0...1]
 
 TODO
 
 * Transducers
-* Tween helper (interpolate between two layout-specifications)
-	* Supermove.tween(start,end) ===> function(time) { }
-* Size & position (alignment) relative to other elements.
-	* 
+* Easing functions
 * Occlusion Culling (i.e. fast scrollview)
 * More examples
