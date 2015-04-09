@@ -2,18 +2,22 @@
   "name": "supermove",
   "version": "0.1.0",
   "description": "Functional Reactive Virtual Dom Layout Engine",
-  "main": "supermove.js",
+  "main": "./src/supermove.js",
   "scripts": {
+    "prepubish":"webpack --optimize-minimize",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Mark Marijnissen",
   "license": "MIT",
+  "keywords":["famo.us","mithril","kefir","layout","virtual dom","rendering"],
   "dependencies": {
-    "css-loader": "^0.9.1",
     "dom-delegate": "^2.0.3",
     "gl-matrix": "^2.1.0",
     "kefir": "^1.3.1",
-    "polyfill-function-prototype-bind": "0.0.1",
+    "polyfill-function-prototype-bind": "0.0.1"
+  },
+  "devDependencies":{
+    "css-loader": "^0.9.1",
     "style-loader": "^0.9.0"
   }
 }

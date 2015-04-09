@@ -5,15 +5,14 @@ var animation = animator.flatMapLatest(function(duration){
 		return Supermove.animate(duration);
 	});
 
-var mouseX = Kefir.fromEvent(document.body,'mousemove')
+var mouseX = move.event('mousemove')
+	.merge(Kefir.constant({pageX: 0}))
 	.combine(Supermove.resize)
 	.map(function(data){
 		return data[0].pageX / data[1][0];
 	})
-	//.merge(Kefir.later(0,0))
 	.onValue(m.redraw);
 
-Supermove.resize.onValue(m.redraw);
 
 Kefir.combine([mouseX,animation],function(mouseX,animation){
 		return (mouseX + animation) % 1.0;
@@ -72,10 +71,11 @@ move.event('click','#2')
 // rotation relative to #1
 move.event('click','#3')
 	.map(function(){
-		var y = move.element(1).rotateY;
+		var start = move.element(3).rotateY;
+		var end = move.element(1).rotateY;
 		return Supermove.tween(
-			{id:3,rotateY: y - Math.PI},
-			{id:3,rotateY: y}
+			{id:3,rotateY: start},
+			{id:3,rotateY: end}
 		);
 	})
 	.flatMapLatest(function(tween){
@@ -88,27 +88,5 @@ move.event('click','#4')
 		animator.emit(1000);
 	});
 
-// Relative Sizing example
-Supermove.resize
-	.map(function(size){
-		return {
-			id: 'parent',
-			show: true,
-			content: 'Parent',
-			y: (size[1] * 0.5)
-		};
-	})
-	.onValue(move.render);
-
-Supermove.resize
-	.map(function(){
-		return {
-			id: 'child',
-			show: true,
-			content: 'Child',
-			y: move.element('parent').y + 100
-		};
-	})
-	.onValue(move.render);
 
 animator.emit(1000);

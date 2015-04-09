@@ -62,7 +62,16 @@ SurfaceController.prototype.setStyle = function(){
 	}
 	var m = this.matrix, d = this.data;
 	if(d.opacity >= 1) d.opacity = 0.99999;
-	else if(d.opacity <= 0) d.opacity = 0.00001;
+	else if(d.opacity <= 0) d.opacity = 0.00001; 
+	// opacity is very low, otherwise Chrome will not render
+	// which can unpredicted cause flickering / rendering lag
+	// 
+	// We're assuming you have good reason to draw the surface,
+	// even when it's not visible.
+	//  - i.e. fast access (at the cost of more memory)
+	// 
+	// If you want to cleanup the node, set `show` to false
+	//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
 	this.style = "opacity: "+d.opacity+"; ";
 
 	mat4.identity(m);
@@ -84,7 +93,8 @@ SurfaceController.prototype.setStyle = function(){
 };
 
 function SurfaceView(ctrl){
-	return m(ctrl.data.element,{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id },ctrl.data.content);
+	var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style, key: ctrl.data.id };
+	return m(ctrl.data.element,attr,ctrl.data.content);
 }
 
 function ContainerIndex(id){
@@ -94,6 +104,9 @@ function ContainerIndex(id){
 		while(index < surflen && this.surfaces[index].data.show === true) index++;
 		if(index === surflen) {
 			this.surfaces.push(new SurfaceController());
+		} else {
+			var removedId = this.surfaces[index].data.id;
+			this._idToIndex[removedId] = undefined;
 		}
 		this._idToIndex[id] = index;
 	}

@@ -17,6 +17,23 @@ Inspired by the best ideas out there:
 
 Example: Open `index.html` and see `test.js`
 
+## The Vision
+
+A fast, efficient, easy-to-use library for creating
+and animating app layouts.
+
+* Friendly developer API
+* Targets mobile devices (iOS/Android apps with Cordova)
+* Fast and efficient
+* Easy and powerful animations
+	* Tweening
+	* Physics
+	* Couple animation to user interaction
+	* Link multiple elements and animations together
+* Reusable widgets / components
+	* Tab-bar, image carousel, buttons, etc
+
+
 ## Idea
 
 Data flows unidirectionally: 
@@ -172,7 +189,10 @@ What does Supermove add?
 
 TODO
 
-* Transducers
+* remove gl-matrix dependency in favor of smaller subset of functions for matrix algebra
 * Easing functions
+* Set supermove-root (see famo.us?)
+* DOM Cache bug - some nodes are free but never used?
 * Occlusion Culling (i.e. fast scrollview)
 * More examples
+* Widgets/Components. Transducers?
