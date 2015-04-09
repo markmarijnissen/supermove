@@ -90,12 +90,16 @@ Hint: To update multiple elements, emit an array of layout-specification events 
 
 Simply subscribe a supermove instance to a Layout-Specification stream to update view:
 ```javascript
-	# render as specified in spec-data from event.
-	modelStream.onValue(move.render)
+// Set current Layout-Specification
+modelStream.onValue(move.render)
 
-	# increment numeric values of current spec with spec data from event.
-	modelStream.onValue(move.inc)
+// Increment numeric values of current Layout-Specification.
+modelStream.onValue(move.inc)
 ```
+
+Hint: Not updating? Call `m.redraw()`!
+
+Hint: For cool particle systems, use `move.inc` to let every particle exert a force on the element.
 
 ### Helpers
 
