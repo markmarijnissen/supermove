@@ -160,11 +160,15 @@ What does Supermove add?
 
 * Layout-Specification: It wraps the Virtual DOM in a Layout-Specification
 	* The Layout-Specification make it easy to do layout with a CSS3 matrix3d transformation
-* Subscribe to Stream: Supermove can subscribe your view to a Kefir Stream: `onValue(move.update)`
+* View are stream subscribers.
+	* Use `move.render` to render a Layout-Specification
+	* Use `move.inc` to increment numeric values of current Layout-Specification
 * Cache DOM nodes: Supermove manages a Mihril view for you.
 * DOM Event Streams: Supermove adds DOM Event Delegation to Mithril and converts events into a Kefir Stream: `move.event(eventType,selector)`
 * Animation Stream: `Supermove.animate(duration)`
-* Window size Stream: `Supermove.resize()`
+* Window size Stream: `Supermove.resize`
+* Tween helper: `Supermove.tween(startSpec,endSpec)(time)`
+
 
 TODO
 
