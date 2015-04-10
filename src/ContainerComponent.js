@@ -7,7 +7,6 @@ function SurfaceController(){
 	this.active = false;
 	this.specs = [{
 		element: '.supermove-surface',
-		show: false,
 		width: 0,
 		height: 0,
 		rotateX: 0,
@@ -70,7 +69,7 @@ SurfaceController.prototype.update = function(){
 	this.element = d.element;	// Mithril View: Virtual DOM element string
 	this.content = d.content;	// Mithril View: Virtual DOM children / content
 
-	if(d.show === false){
+	if(d.show !== true){
 		this.style = "display: none;";
 		return;
 	}

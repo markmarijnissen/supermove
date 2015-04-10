@@ -13,14 +13,13 @@ module.exports = function combine(){
 			switch(key){
 				case 'id':
 					if(destType !== 'undefined' && destVal !== srcVal){
-						throw new Error('merging specs with different IDs! ('+dest[key]+' != '+srcVal+')');
+						throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
 					}
 					dest[key] = srcVal;
 					break;
 				case 'element':
-					dest[key] = destVal || '';
-					if(key !== 'element' || destVal.indexOf(srcVal) < 0){
-						dest[key] += srcVal;
+					if(!destVal || destVal.indexOf(srcVal) < 0){
+						dest[key] = (destVal || '') + srcVal;
 					}
 					break;
 				case 'opacity':
@@ -28,6 +27,11 @@ module.exports = function combine(){
 					break;
 				case 'width':
 				case 'height':
+					if(SUPERMOVE_DEVELOPMENT){
+						if(srcType !== 'number'){
+							console.error('[dev] '+key+' is not a number!');
+						}
+					}
 					// multiply a percentages
 					if(srcVal <= 1.0 && srcVal >= 0.0) {
 						dest[key] = (destVal || 1) * srcVal;

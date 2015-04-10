@@ -45,21 +45,26 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(7);
-	__webpack_require__(6);
-	var Kefir = __webpack_require__(9);
+	__webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 	var m = __webpack_require__(1);
 
 	var Supermove = __webpack_require__(2);
 	Supermove.animate = __webpack_require__(3);
 	Supermove.resize = __webpack_require__(4);
 	Supermove.tween = __webpack_require__(5);
-	Supermove.combine = __webpack_require__(18);
+	Supermove.combine = __webpack_require__(6);
+	Supermove.VERSION = ("0.1.0");
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
 		window.Supermove = Supermove;
 		window.Kefir = Kefir;
 		window.m = m;
+	}
+
+	if(true){
+		console.log('Supermove '+("0.1.0")+' (developer build)');
 	}
 	module.exports = Supermove;
 
@@ -1212,16 +1217,16 @@
 	if (typeof module != "undefined" && module !== null && module.exports) module.exports = m;
 	else if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {return m}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)(module)))
 
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ContainerComponent = __webpack_require__(10);
-	var DomDelegate = __webpack_require__(13).Delegate;
+	var ContainerComponent = __webpack_require__(11);
+	var DomDelegate = __webpack_require__(15).Delegate;
 	var m = __webpack_require__(1);
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 
 	function subscribe(eventType,handler,useCapture,callback){
 		this.on(eventType,handler,callback,useCapture);
@@ -1252,7 +1257,7 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 	var m = __webpack_require__(1);
 	var callbacks = [];
 
@@ -1297,7 +1302,7 @@
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 
 	module.exports = Kefir.fromEvent(window,'resize')
 		.map(function(event){
@@ -1330,6 +1335,110 @@
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
+	module.exports = function combine(){
+		var key,srcVal,destVal,srcType,
+			dest = {}, 
+			sources = Array.prototype.slice.call(arguments,0);
+		
+		for(var i = 0, len = sources.length; i < len; i++){
+			if(sources[i] === null) continue;
+			for(key in sources[i]){
+				srcVal = sources[i][key];
+				srcType = typeof srcVal;
+				destVal = dest[key];
+				destType = typeof destVal;
+				switch(key){
+					case 'id':
+						if(destType !== 'undefined' && destVal !== srcVal){
+							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
+						}
+						dest[key] = srcVal;
+						break;
+					case 'element':
+						if(!destVal || destVal.indexOf(srcVal) < 0){
+							dest[key] = (destVal || '') + srcVal;
+						}
+						break;
+					case 'opacity':
+						dest[key] = (destVal || 1) * srcVal;
+						break;
+					case 'width':
+					case 'height':
+						if(true){
+							if(srcType !== 'number'){
+								console.error('[dev] '+key+' is not a number!');
+							}
+						}
+						// multiply a percentages
+						if(srcVal <= 1.0 && srcVal >= 0.0) {
+							dest[key] = (destVal || 1) * srcVal;
+						// + on pixels
+						} else {
+							dest[key] = (destVal || 0) + srcVal;
+						}
+						break;
+					default:
+						// + on numbers
+						if(srcType === 'number'){
+							dest[key] = (destVal || 0) + srcVal;
+						
+						// append (if not included) on strings
+						} else if(srcType === 'string'){
+							dest[key] = (destVal || '') + srcVal;
+
+						// && on booleans
+						} else if(srcType === 'boolean'){  
+							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
+						
+						// Append to Arrays
+						} else if(Array.isArray(srcVal)){
+							if(destType === 'undefined') {
+								destVal = [];
+							} else if(!Array.isArray(destVal)){
+								destVal = [destVal];
+							}
+							dest[key] = destVal.concat(srcVal);
+						}
+				}
+			}
+		}
+		return dest;
+	};
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// style-loader: Adds some css to the DOM by adding a <style> tag
+
+	// load the styles
+	var content = __webpack_require__(8);
+	if(typeof content === 'string') content = [[module.id, content, '']];
+	// add the styles to the DOM
+	var update = __webpack_require__(12)(content, {});
+	// Hot Module Replacement
+	if(false) {
+		// When the styles change, update the <style> tags
+		module.hot.accept("!!/Users/mark/dev/supermove/node_modules/css-loader/index.js!/Users/mark/dev/supermove/src/supermove.css", function() {
+			var newContent = require("!!/Users/mark/dev/supermove/node_modules/css-loader/index.js!/Users/mark/dev/supermove/src/supermove.css");
+			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+			update(newContent);
+		});
+		// When the module is disposed, remove the <style> tags
+		module.hot.dispose(function() { update(); });
+	}
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	exports = module.exports = __webpack_require__(14)();
+	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
 	if (!Function.prototype.bind) {
 	  Function.prototype.bind = function (oThis) {
@@ -1358,37 +1467,7 @@
 
 
 /***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// style-loader: Adds some css to the DOM by adding a <style> tag
-
-	// load the styles
-	var content = __webpack_require__(8);
-	if(typeof content === 'string') content = [[module.id, content, '']];
-	// add the styles to the DOM
-	var update = __webpack_require__(11)(content, {});
-	// Hot Module Replacement
-	if(false) {
-		// When the styles change, update the <style> tags
-		module.hot.accept("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css", function() {
-			var newContent = require("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-		// When the module is disposed, remove the <style> tags
-		module.hot.dispose(function() { update(); });
-	}
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	exports = module.exports = __webpack_require__(14)();
-	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
-
-/***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! Kefir.js v1.3.1
@@ -4532,19 +4611,18 @@
 	}(this));
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var mat4 = __webpack_require__(16).mat4;
 	var m = __webpack_require__(1);
-	var combine = __webpack_require__(18);
+	var combine = __webpack_require__(6);
 
 	function SurfaceController(){
 		this.matrix = mat4.create();
 		this.active = false;
 		this.specs = [{
 			element: '.supermove-surface',
-			show: false,
 			width: 0,
 			height: 0,
 			rotateX: 0,
@@ -4596,6 +4674,9 @@
 		return false;
 	};
 
+	function getNumValue(val){		
+		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+	}
 
 	SurfaceController.prototype.update = function(){
 		var d = combine.apply(null,this.specs);
@@ -4604,7 +4685,7 @@
 		this.element = d.element;	// Mithril View: Virtual DOM element string
 		this.content = d.content;	// Mithril View: Virtual DOM children / content
 
-		if(d.show === false){
+		if(d.show !== true){
 			this.style = "display: none;";
 			return;
 		}
@@ -4630,12 +4711,12 @@
 		mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
 		
 		if(d.width){
-			this.style += 'width: '+d.width+'; ';
+			this.style += 'width: '+getNumValue(d.width)+'; ';
 		}
 		if(d.height){
-			this.style += 'height: '+d.height+'; ';
+			this.style += 'height: '+getNumValue(d.height)+'; ';
 		}
-		this.style += 'transform-origin: '+(d.originX * 100)+'% '+(d.originY * 100)+'% 0px; ';
+		this.style += 'transform-origin: '+getNumValue(d.originX)+' '+getNumValue(d.originY)+'% 0px; ';
 		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 	};
 
@@ -4698,7 +4779,7 @@
 	});
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -4894,7 +4975,7 @@
 
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -4907,31 +4988,6 @@
 		}
 		return module;
 	}
-
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*jshint browser:true, node:true*/
-
-	'use strict';
-
-	/**
-	 * @preserve Create and manage a DOM event delegator.
-	 *
-	 * @version 0.3.0
-	 * @codingstandard ftlabs-jsv2
-	 * @copyright The Financial Times Limited [All Rights Reserved]
-	 * @license MIT License (see LICENSE.txt)
-	 */
-	var Delegate = __webpack_require__(15);
-
-	module.exports = function(root) {
-	  return new Delegate(root);
-	};
-
-	module.exports.Delegate = Delegate;
 
 
 /***/ },
@@ -4963,431 +5019,21 @@
 
 	'use strict';
 
-	module.exports = Delegate;
-
 	/**
-	 * DOM event delegator
+	 * @preserve Create and manage a DOM event delegator.
 	 *
-	 * The delegator will listen
-	 * for events that bubble up
-	 * to the root node.
-	 *
-	 * @constructor
-	 * @param {Node|string} [root] The root node or a selector string matching the root node
+	 * @version 0.3.0
+	 * @codingstandard ftlabs-jsv2
+	 * @copyright The Financial Times Limited [All Rights Reserved]
+	 * @license MIT License (see LICENSE.txt)
 	 */
-	function Delegate(root) {
+	var Delegate = __webpack_require__(17);
 
-	  /**
-	   * Maintain a map of listener
-	   * lists, keyed by event name.
-	   *
-	   * @type Object
-	   */
-	  this.listenerMap = [{}, {}];
-	  if (root) {
-	    this.root(root);
-	  }
-
-	  /** @type function() */
-	  this.handle = Delegate.prototype.handle.bind(this);
-	}
-
-	/**
-	 * Start listening for events
-	 * on the provided DOM element
-	 *
-	 * @param  {Node|string} [root] The root node or a selector string matching the root node
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.root = function(root) {
-	  var listenerMap = this.listenerMap;
-	  var eventType;
-
-	  // Remove master event listeners
-	  if (this.rootElement) {
-	    for (eventType in listenerMap[1]) {
-	      if (listenerMap[1].hasOwnProperty(eventType)) {
-	        this.rootElement.removeEventListener(eventType, this.handle, true);
-	      }
-	    }
-	    for (eventType in listenerMap[0]) {
-	      if (listenerMap[0].hasOwnProperty(eventType)) {
-	        this.rootElement.removeEventListener(eventType, this.handle, false);
-	      }
-	    }
-	  }
-
-	  // If no root or root is not
-	  // a dom node, then remove internal
-	  // root reference and exit here
-	  if (!root || !root.addEventListener) {
-	    if (this.rootElement) {
-	      delete this.rootElement;
-	    }
-	    return this;
-	  }
-
-	  /**
-	   * The root node at which
-	   * listeners are attached.
-	   *
-	   * @type Node
-	   */
-	  this.rootElement = root;
-
-	  // Set up master event listeners
-	  for (eventType in listenerMap[1]) {
-	    if (listenerMap[1].hasOwnProperty(eventType)) {
-	      this.rootElement.addEventListener(eventType, this.handle, true);
-	    }
-	  }
-	  for (eventType in listenerMap[0]) {
-	    if (listenerMap[0].hasOwnProperty(eventType)) {
-	      this.rootElement.addEventListener(eventType, this.handle, false);
-	    }
-	  }
-
-	  return this;
+	module.exports = function(root) {
+	  return new Delegate(root);
 	};
 
-	/**
-	 * @param {string} eventType
-	 * @returns boolean
-	 */
-	Delegate.prototype.captureForType = function(eventType) {
-	  return ['blur', 'error', 'focus', 'load', 'resize', 'scroll'].indexOf(eventType) !== -1;
-	};
-
-	/**
-	 * Attach a handler to one
-	 * event for all elements
-	 * that match the selector,
-	 * now or in the future
-	 *
-	 * The handler function receives
-	 * three arguments: the DOM event
-	 * object, the node that matched
-	 * the selector while the event
-	 * was bubbling and a reference
-	 * to itself. Within the handler,
-	 * 'this' is equal to the second
-	 * argument.
-	 *
-	 * The node that actually received
-	 * the event can be accessed via
-	 * 'event.target'.
-	 *
-	 * @param {string} eventType Listen for these events
-	 * @param {string|undefined} selector Only handle events on elements matching this selector, if undefined match root element
-	 * @param {function()} handler Handler function - event data passed here will be in event.data
-	 * @param {Object} [eventData] Data to pass in event.data
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.on = function(eventType, selector, handler, useCapture) {
-	  var root, listenerMap, matcher, matcherParam;
-
-	  if (!eventType) {
-	    throw new TypeError('Invalid event type: ' + eventType);
-	  }
-
-	  // handler can be passed as
-	  // the second or third argument
-	  if (typeof selector === 'function') {
-	    useCapture = handler;
-	    handler = selector;
-	    selector = null;
-	  }
-
-	  // Fallback to sensible defaults
-	  // if useCapture not set
-	  if (useCapture === undefined) {
-	    useCapture = this.captureForType(eventType);
-	  }
-
-	  if (typeof handler !== 'function') {
-	    throw new TypeError('Handler must be a type of Function');
-	  }
-
-	  root = this.rootElement;
-	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
-
-	  // Add master handler for type if not created yet
-	  if (!listenerMap[eventType]) {
-	    if (root) {
-	      root.addEventListener(eventType, this.handle, useCapture);
-	    }
-	    listenerMap[eventType] = [];
-	  }
-
-	  if (!selector) {
-	    matcherParam = null;
-
-	    // COMPLEX - matchesRoot needs to have access to
-	    // this.rootElement, so bind the function to this.
-	    matcher = matchesRoot.bind(this);
-
-	  // Compile a matcher for the given selector
-	  } else if (/^[a-z]+$/i.test(selector)) {
-	    matcherParam = selector;
-	    matcher = matchesTag;
-	  } else if (/^#[a-z0-9\-_]+$/i.test(selector)) {
-	    matcherParam = selector.slice(1);
-	    matcher = matchesId;
-	  } else {
-	    matcherParam = selector;
-	    matcher = matches;
-	  }
-
-	  // Add to the list of listeners
-	  listenerMap[eventType].push({
-	    selector: selector,
-	    handler: handler,
-	    matcher: matcher,
-	    matcherParam: matcherParam
-	  });
-
-	  return this;
-	};
-
-	/**
-	 * Remove an event handler
-	 * for elements that match
-	 * the selector, forever
-	 *
-	 * @param {string} [eventType] Remove handlers for events matching this type, considering the other parameters
-	 * @param {string} [selector] If this parameter is omitted, only handlers which match the other two will be removed
-	 * @param {function()} [handler] If this parameter is omitted, only handlers which match the previous two will be removed
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.off = function(eventType, selector, handler, useCapture) {
-	  var i, listener, listenerMap, listenerList, singleEventType;
-
-	  // Handler can be passed as
-	  // the second or third argument
-	  if (typeof selector === 'function') {
-	    useCapture = handler;
-	    handler = selector;
-	    selector = null;
-	  }
-
-	  // If useCapture not set, remove
-	  // all event listeners
-	  if (useCapture === undefined) {
-	    this.off(eventType, selector, handler, true);
-	    this.off(eventType, selector, handler, false);
-	    return this;
-	  }
-
-	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
-	  if (!eventType) {
-	    for (singleEventType in listenerMap) {
-	      if (listenerMap.hasOwnProperty(singleEventType)) {
-	        this.off(singleEventType, selector, handler);
-	      }
-	    }
-
-	    return this;
-	  }
-
-	  listenerList = listenerMap[eventType];
-	  if (!listenerList || !listenerList.length) {
-	    return this;
-	  }
-
-	  // Remove only parameter matches
-	  // if specified
-	  for (i = listenerList.length - 1; i >= 0; i--) {
-	    listener = listenerList[i];
-
-	    if ((!selector || selector === listener.selector) && (!handler || handler === listener.handler)) {
-	      listenerList.splice(i, 1);
-	    }
-	  }
-
-	  // All listeners removed
-	  if (!listenerList.length) {
-	    delete listenerMap[eventType];
-
-	    // Remove the main handler
-	    if (this.rootElement) {
-	      this.rootElement.removeEventListener(eventType, this.handle, useCapture);
-	    }
-	  }
-
-	  return this;
-	};
-
-
-	/**
-	 * Handle an arbitrary event.
-	 *
-	 * @param {Event} event
-	 */
-	Delegate.prototype.handle = function(event) {
-	  var i, l, type = event.type, root, phase, listener, returned, listenerList = [], target, /** @const */ EVENTIGNORE = 'ftLabsDelegateIgnore';
-
-	  if (event[EVENTIGNORE] === true) {
-	    return;
-	  }
-
-	  target = event.target;
-
-	  // Hardcode value of Node.TEXT_NODE
-	  // as not defined in IE8
-	  if (target.nodeType === 3) {
-	    target = target.parentNode;
-	  }
-
-	  root = this.rootElement;
-
-	  phase = event.eventPhase || ( event.target !== event.currentTarget ? 3 : 2 );
-	  
-	  switch (phase) {
-	    case 1: //Event.CAPTURING_PHASE:
-	      listenerList = this.listenerMap[1][type];
-	    break;
-	    case 2: //Event.AT_TARGET:
-	      if (this.listenerMap[0] && this.listenerMap[0][type]) listenerList = listenerList.concat(this.listenerMap[0][type]);
-	      if (this.listenerMap[1] && this.listenerMap[1][type]) listenerList = listenerList.concat(this.listenerMap[1][type]);
-	    break;
-	    case 3: //Event.BUBBLING_PHASE:
-	      listenerList = this.listenerMap[0][type];
-	    break;
-	  }
-
-	  // Need to continuously check
-	  // that the specific list is
-	  // still populated in case one
-	  // of the callbacks actually
-	  // causes the list to be destroyed.
-	  l = listenerList.length;
-	  while (target && l) {
-	    for (i = 0; i < l; i++) {
-	      listener = listenerList[i];
-
-	      // Bail from this loop if
-	      // the length changed and
-	      // no more listeners are
-	      // defined between i and l.
-	      if (!listener) {
-	        break;
-	      }
-
-	      // Check for match and fire
-	      // the event if there's one
-	      //
-	      // TODO:MCG:20120117: Need a way
-	      // to check if event#stopImmediatePropagation
-	      // was called. If so, break both loops.
-	      if (listener.matcher.call(target, listener.matcherParam, target)) {
-	        returned = this.fire(event, target, listener);
-	      }
-
-	      // Stop propagation to subsequent
-	      // callbacks if the callback returned
-	      // false
-	      if (returned === false) {
-	        event[EVENTIGNORE] = true;
-	        event.preventDefault();
-	        return;
-	      }
-	    }
-
-	    // TODO:MCG:20120117: Need a way to
-	    // check if event#stopPropagation
-	    // was called. If so, break looping
-	    // through the DOM. Stop if the
-	    // delegation root has been reached
-	    if (target === root) {
-	      break;
-	    }
-
-	    l = listenerList.length;
-	    target = target.parentElement;
-	  }
-	};
-
-	/**
-	 * Fire a listener on a target.
-	 *
-	 * @param {Event} event
-	 * @param {Node} target
-	 * @param {Object} listener
-	 * @returns {boolean}
-	 */
-	Delegate.prototype.fire = function(event, target, listener) {
-	  return listener.handler.call(target, event, target);
-	};
-
-	/**
-	 * Check whether an element
-	 * matches a generic selector.
-	 *
-	 * @type function()
-	 * @param {string} selector A CSS selector
-	 */
-	var matches = (function(el) {
-	  if (!el) return;
-	  var p = el.prototype;
-	  return (p.matches || p.matchesSelector || p.webkitMatchesSelector || p.mozMatchesSelector || p.msMatchesSelector || p.oMatchesSelector);
-	}(Element));
-
-	/**
-	 * Check whether an element
-	 * matches a tag selector.
-	 *
-	 * Tags are NOT case-sensitive,
-	 * except in XML (and XML-based
-	 * languages such as XHTML).
-	 *
-	 * @param {string} tagName The tag name to test against
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesTag(tagName, element) {
-	  return tagName.toLowerCase() === element.tagName.toLowerCase();
-	}
-
-	/**
-	 * Check whether an element
-	 * matches the root.
-	 *
-	 * @param {?String} selector In this case this is always passed through as null and not used
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesRoot(selector, element) {
-	  /*jshint validthis:true*/
-	  if (this.rootElement === window) return element === document;
-	  return this.rootElement === element;
-	}
-
-	/**
-	 * Check whether the ID of
-	 * the element in 'this'
-	 * matches the given ID.
-	 *
-	 * IDs are case-sensitive.
-	 *
-	 * @param {string} id The ID to test against
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesId(id, element) {
-	  return id === element.id;
-	}
-
-	/**
-	 * Short hand for off()
-	 * and root(), ie both
-	 * with no parameters
-	 *
-	 * @return void
-	 */
-	Delegate.prototype.destroy = function() {
-	  this.off();
-	  this.root();
-	};
+	module.exports.Delegate = Delegate;
 
 
 /***/ },
@@ -9268,46 +8914,439 @@
 
 
 /***/ },
-/* 17 */,
-/* 18 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function combine(){
-		var key,srcVal,destVal,srcType,
-			dest = {}, 
-			sources = Array.prototype.slice.call(arguments,0);
-		for(var i = 0, len = sources.length; i < len; i++){
-			if(sources[i] === null) continue;
-			for(key in sources[i]){
-				srcVal = sources[i][key];
-				srcType = typeof srcVal;
-				if(key === 'id'){
-					if(typeof dest[key] !== 'undefined' && dest[key] !== srcVal){
-						throw new Error('merging specs with different IDs! ('+dest[key]+' != '+srcVal+')');
-					}
-					dest[key] = srcVal;
-				} else if(srcType === 'number'){
-					dest[key] = (dest[key] || 0) + srcVal;
-				} else if(srcType === 'string'){
-					dest[key] = dest[key] || '';
-					if(key !== 'element' || dest[key].indexOf(srcVal) < 0){
-						dest[key] += srcVal;
-					}
-				} else if(srcType === 'boolean'){  // only one SHOW needs to be true?
-					dest[key] = dest[key] || srcVal;
-				} else if(Array.isArray(srcVal)){
-					destVal = dest[key];
-					if(typeof destVal === 'undefined') {
-						destVal = [];
-					} else if(!Array.isArray(destVal)){
-						destVal = [destVal];
-					}
-					dest[key] = destVal.concat(srcVal);
-				}
-			}
-		}
-		return dest;
+	/*jshint browser:true, node:true*/
+
+	'use strict';
+
+	module.exports = Delegate;
+
+	/**
+	 * DOM event delegator
+	 *
+	 * The delegator will listen
+	 * for events that bubble up
+	 * to the root node.
+	 *
+	 * @constructor
+	 * @param {Node|string} [root] The root node or a selector string matching the root node
+	 */
+	function Delegate(root) {
+
+	  /**
+	   * Maintain a map of listener
+	   * lists, keyed by event name.
+	   *
+	   * @type Object
+	   */
+	  this.listenerMap = [{}, {}];
+	  if (root) {
+	    this.root(root);
+	  }
+
+	  /** @type function() */
+	  this.handle = Delegate.prototype.handle.bind(this);
 	}
+
+	/**
+	 * Start listening for events
+	 * on the provided DOM element
+	 *
+	 * @param  {Node|string} [root] The root node or a selector string matching the root node
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.root = function(root) {
+	  var listenerMap = this.listenerMap;
+	  var eventType;
+
+	  // Remove master event listeners
+	  if (this.rootElement) {
+	    for (eventType in listenerMap[1]) {
+	      if (listenerMap[1].hasOwnProperty(eventType)) {
+	        this.rootElement.removeEventListener(eventType, this.handle, true);
+	      }
+	    }
+	    for (eventType in listenerMap[0]) {
+	      if (listenerMap[0].hasOwnProperty(eventType)) {
+	        this.rootElement.removeEventListener(eventType, this.handle, false);
+	      }
+	    }
+	  }
+
+	  // If no root or root is not
+	  // a dom node, then remove internal
+	  // root reference and exit here
+	  if (!root || !root.addEventListener) {
+	    if (this.rootElement) {
+	      delete this.rootElement;
+	    }
+	    return this;
+	  }
+
+	  /**
+	   * The root node at which
+	   * listeners are attached.
+	   *
+	   * @type Node
+	   */
+	  this.rootElement = root;
+
+	  // Set up master event listeners
+	  for (eventType in listenerMap[1]) {
+	    if (listenerMap[1].hasOwnProperty(eventType)) {
+	      this.rootElement.addEventListener(eventType, this.handle, true);
+	    }
+	  }
+	  for (eventType in listenerMap[0]) {
+	    if (listenerMap[0].hasOwnProperty(eventType)) {
+	      this.rootElement.addEventListener(eventType, this.handle, false);
+	    }
+	  }
+
+	  return this;
+	};
+
+	/**
+	 * @param {string} eventType
+	 * @returns boolean
+	 */
+	Delegate.prototype.captureForType = function(eventType) {
+	  return ['blur', 'error', 'focus', 'load', 'resize', 'scroll'].indexOf(eventType) !== -1;
+	};
+
+	/**
+	 * Attach a handler to one
+	 * event for all elements
+	 * that match the selector,
+	 * now or in the future
+	 *
+	 * The handler function receives
+	 * three arguments: the DOM event
+	 * object, the node that matched
+	 * the selector while the event
+	 * was bubbling and a reference
+	 * to itself. Within the handler,
+	 * 'this' is equal to the second
+	 * argument.
+	 *
+	 * The node that actually received
+	 * the event can be accessed via
+	 * 'event.target'.
+	 *
+	 * @param {string} eventType Listen for these events
+	 * @param {string|undefined} selector Only handle events on elements matching this selector, if undefined match root element
+	 * @param {function()} handler Handler function - event data passed here will be in event.data
+	 * @param {Object} [eventData] Data to pass in event.data
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.on = function(eventType, selector, handler, useCapture) {
+	  var root, listenerMap, matcher, matcherParam;
+
+	  if (!eventType) {
+	    throw new TypeError('Invalid event type: ' + eventType);
+	  }
+
+	  // handler can be passed as
+	  // the second or third argument
+	  if (typeof selector === 'function') {
+	    useCapture = handler;
+	    handler = selector;
+	    selector = null;
+	  }
+
+	  // Fallback to sensible defaults
+	  // if useCapture not set
+	  if (useCapture === undefined) {
+	    useCapture = this.captureForType(eventType);
+	  }
+
+	  if (typeof handler !== 'function') {
+	    throw new TypeError('Handler must be a type of Function');
+	  }
+
+	  root = this.rootElement;
+	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
+
+	  // Add master handler for type if not created yet
+	  if (!listenerMap[eventType]) {
+	    if (root) {
+	      root.addEventListener(eventType, this.handle, useCapture);
+	    }
+	    listenerMap[eventType] = [];
+	  }
+
+	  if (!selector) {
+	    matcherParam = null;
+
+	    // COMPLEX - matchesRoot needs to have access to
+	    // this.rootElement, so bind the function to this.
+	    matcher = matchesRoot.bind(this);
+
+	  // Compile a matcher for the given selector
+	  } else if (/^[a-z]+$/i.test(selector)) {
+	    matcherParam = selector;
+	    matcher = matchesTag;
+	  } else if (/^#[a-z0-9\-_]+$/i.test(selector)) {
+	    matcherParam = selector.slice(1);
+	    matcher = matchesId;
+	  } else {
+	    matcherParam = selector;
+	    matcher = matches;
+	  }
+
+	  // Add to the list of listeners
+	  listenerMap[eventType].push({
+	    selector: selector,
+	    handler: handler,
+	    matcher: matcher,
+	    matcherParam: matcherParam
+	  });
+
+	  return this;
+	};
+
+	/**
+	 * Remove an event handler
+	 * for elements that match
+	 * the selector, forever
+	 *
+	 * @param {string} [eventType] Remove handlers for events matching this type, considering the other parameters
+	 * @param {string} [selector] If this parameter is omitted, only handlers which match the other two will be removed
+	 * @param {function()} [handler] If this parameter is omitted, only handlers which match the previous two will be removed
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.off = function(eventType, selector, handler, useCapture) {
+	  var i, listener, listenerMap, listenerList, singleEventType;
+
+	  // Handler can be passed as
+	  // the second or third argument
+	  if (typeof selector === 'function') {
+	    useCapture = handler;
+	    handler = selector;
+	    selector = null;
+	  }
+
+	  // If useCapture not set, remove
+	  // all event listeners
+	  if (useCapture === undefined) {
+	    this.off(eventType, selector, handler, true);
+	    this.off(eventType, selector, handler, false);
+	    return this;
+	  }
+
+	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
+	  if (!eventType) {
+	    for (singleEventType in listenerMap) {
+	      if (listenerMap.hasOwnProperty(singleEventType)) {
+	        this.off(singleEventType, selector, handler);
+	      }
+	    }
+
+	    return this;
+	  }
+
+	  listenerList = listenerMap[eventType];
+	  if (!listenerList || !listenerList.length) {
+	    return this;
+	  }
+
+	  // Remove only parameter matches
+	  // if specified
+	  for (i = listenerList.length - 1; i >= 0; i--) {
+	    listener = listenerList[i];
+
+	    if ((!selector || selector === listener.selector) && (!handler || handler === listener.handler)) {
+	      listenerList.splice(i, 1);
+	    }
+	  }
+
+	  // All listeners removed
+	  if (!listenerList.length) {
+	    delete listenerMap[eventType];
+
+	    // Remove the main handler
+	    if (this.rootElement) {
+	      this.rootElement.removeEventListener(eventType, this.handle, useCapture);
+	    }
+	  }
+
+	  return this;
+	};
+
+
+	/**
+	 * Handle an arbitrary event.
+	 *
+	 * @param {Event} event
+	 */
+	Delegate.prototype.handle = function(event) {
+	  var i, l, type = event.type, root, phase, listener, returned, listenerList = [], target, /** @const */ EVENTIGNORE = 'ftLabsDelegateIgnore';
+
+	  if (event[EVENTIGNORE] === true) {
+	    return;
+	  }
+
+	  target = event.target;
+
+	  // Hardcode value of Node.TEXT_NODE
+	  // as not defined in IE8
+	  if (target.nodeType === 3) {
+	    target = target.parentNode;
+	  }
+
+	  root = this.rootElement;
+
+	  phase = event.eventPhase || ( event.target !== event.currentTarget ? 3 : 2 );
+	  
+	  switch (phase) {
+	    case 1: //Event.CAPTURING_PHASE:
+	      listenerList = this.listenerMap[1][type];
+	    break;
+	    case 2: //Event.AT_TARGET:
+	      if (this.listenerMap[0] && this.listenerMap[0][type]) listenerList = listenerList.concat(this.listenerMap[0][type]);
+	      if (this.listenerMap[1] && this.listenerMap[1][type]) listenerList = listenerList.concat(this.listenerMap[1][type]);
+	    break;
+	    case 3: //Event.BUBBLING_PHASE:
+	      listenerList = this.listenerMap[0][type];
+	    break;
+	  }
+
+	  // Need to continuously check
+	  // that the specific list is
+	  // still populated in case one
+	  // of the callbacks actually
+	  // causes the list to be destroyed.
+	  l = listenerList.length;
+	  while (target && l) {
+	    for (i = 0; i < l; i++) {
+	      listener = listenerList[i];
+
+	      // Bail from this loop if
+	      // the length changed and
+	      // no more listeners are
+	      // defined between i and l.
+	      if (!listener) {
+	        break;
+	      }
+
+	      // Check for match and fire
+	      // the event if there's one
+	      //
+	      // TODO:MCG:20120117: Need a way
+	      // to check if event#stopImmediatePropagation
+	      // was called. If so, break both loops.
+	      if (listener.matcher.call(target, listener.matcherParam, target)) {
+	        returned = this.fire(event, target, listener);
+	      }
+
+	      // Stop propagation to subsequent
+	      // callbacks if the callback returned
+	      // false
+	      if (returned === false) {
+	        event[EVENTIGNORE] = true;
+	        event.preventDefault();
+	        return;
+	      }
+	    }
+
+	    // TODO:MCG:20120117: Need a way to
+	    // check if event#stopPropagation
+	    // was called. If so, break looping
+	    // through the DOM. Stop if the
+	    // delegation root has been reached
+	    if (target === root) {
+	      break;
+	    }
+
+	    l = listenerList.length;
+	    target = target.parentElement;
+	  }
+	};
+
+	/**
+	 * Fire a listener on a target.
+	 *
+	 * @param {Event} event
+	 * @param {Node} target
+	 * @param {Object} listener
+	 * @returns {boolean}
+	 */
+	Delegate.prototype.fire = function(event, target, listener) {
+	  return listener.handler.call(target, event, target);
+	};
+
+	/**
+	 * Check whether an element
+	 * matches a generic selector.
+	 *
+	 * @type function()
+	 * @param {string} selector A CSS selector
+	 */
+	var matches = (function(el) {
+	  if (!el) return;
+	  var p = el.prototype;
+	  return (p.matches || p.matchesSelector || p.webkitMatchesSelector || p.mozMatchesSelector || p.msMatchesSelector || p.oMatchesSelector);
+	}(Element));
+
+	/**
+	 * Check whether an element
+	 * matches a tag selector.
+	 *
+	 * Tags are NOT case-sensitive,
+	 * except in XML (and XML-based
+	 * languages such as XHTML).
+	 *
+	 * @param {string} tagName The tag name to test against
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesTag(tagName, element) {
+	  return tagName.toLowerCase() === element.tagName.toLowerCase();
+	}
+
+	/**
+	 * Check whether an element
+	 * matches the root.
+	 *
+	 * @param {?String} selector In this case this is always passed through as null and not used
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesRoot(selector, element) {
+	  /*jshint validthis:true*/
+	  if (this.rootElement === window) return element === document;
+	  return this.rootElement === element;
+	}
+
+	/**
+	 * Check whether the ID of
+	 * the element in 'this'
+	 * matches the given ID.
+	 *
+	 * IDs are case-sensitive.
+	 *
+	 * @param {string} id The ID to test against
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesId(id, element) {
+	  return id === element.id;
+	}
+
+	/**
+	 * Short hand for off()
+	 * and root(), ie both
+	 * with no parameters
+	 *
+	 * @return void
+	 */
+	Delegate.prototype.destroy = function() {
+	  this.off();
+	  this.root();
+	};
+
 
 /***/ }
 /******/ ]);

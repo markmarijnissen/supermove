@@ -28,8 +28,8 @@ var buttons = Kefir.combine([mouseX,animation],function(mouseX,animation){
 				id:id + 1,
 				element: '.text',
 				show: true,
-				width: '200px',
-				height: '20px',
+				width: 200,
+				height: 20,
 				x: time * size[0] - 100,
 				y: size[1] * 0.5 + ((id - 1.5) * 50),
 				content: text
