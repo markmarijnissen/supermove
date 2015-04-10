@@ -33,7 +33,7 @@ Inspired by the best ideas out there:
 	* Flat DOM
 	* CSS3 matrix3d transformation to position elements
 	* Cache DOM nodes
-* Layout speciciation (inspired by famo.us & snabbt.js)
+* Layout specification (inspired by famo.us & snabbt.js)
 * Model/View/Intent (inspired by CycleJS)
 * Functional reactive programming (Supermove uses Kefir)
 * Virtual DOM (Supermove uses Mithril)
@@ -113,8 +113,11 @@ var specs = [
 		x: 0,
 		y: 0,
 		z: 0,
-		origin: [0.5, 0.5],
-		scale: [1,1,1],
+		originX: 0.5,
+		originY: 0.5,
+		scaleX: 1,
+		scaleY: 1,
+		scaleZ: 1,
 		opacity: 1,
 		content: m('div','Hello World')	// mithril' Virtual DOM
 	},{
@@ -128,13 +131,13 @@ Hint: To update multiple elements, emit an array of layout-specification events 
 
 ### Views
 
+**IS CHANGING**
+
 Simply subscribe a supermove instance to a Layout-Specification stream to update view:
 ```javascript
-// Set current Layout-Specification
-modelStream.onValue(move.render)
-
-// Increment numeric values of current Layout-Specification.
-modelStream.onValue(move.inc)
+// Draw element with `id` using the `stream` with Layout-Specification
+move.subscribe(id,stream);
+move.unsubscribe(id,stream);
 ```
 
 Hint: Not updating? Call `m.redraw()`!
@@ -162,33 +165,9 @@ Supermove.tween(startSpec,endSpec) // return function(time) {... }
 Supermove
 	.animate(500)
 	.map(Supermove.tween(start,end)) // Stream with tweening spec
-	.onValue(move.render)
 
 // Get Layout-Specification (for relative positioning and sizing)
-move.element('parent') // returns Layout-Specification
-
-// Relative Sizing example
-Supermove.resize
-	.map(function(size){
-		return {
-			id: 'parent',
-			show: true,
-			content: 'Parent',
-			y: (size[1] * 0.5)
-		};
-	})
-	.onValue(move.render);
-
-Supermove.resize
-	.map(function(){
-		return {
-			id: 'child',
-			show: true,
-			content: 'Child',
-			y: move.element('parent').y + 100
-		};
-	})
-	.onValue(move.render);
+var spec = move.element('parent') // returns Layout-Specification
 
 ```
 
@@ -201,11 +180,10 @@ What does Supermove add?
 * Layout-Specification: It wraps the Virtual DOM in a Layout-Specification
 	* The Layout-Specification make it easy to do layout with a CSS3 matrix3d transformation
 * View are stream subscribers.
-	* Use `move.render` to render a Layout-Specification
-	* Use `move.inc` to increment numeric values of current Layout-Specification
 * Cache DOM nodes: Supermove manages a Mihril view for you.
 * DOM Event Streams: Supermove adds DOM Event Delegation to Mithril and converts events into a Kefir Stream: `move.event(eventType,selector)`
 * Animation Stream: `Supermove.animate(duration)`
 * Window size Stream: `Supermove.resize`
 * Tween helper: `Supermove.tween(startSpec,endSpec)(time)`
+* Combine helper: Combine multiple specs into one.
 
