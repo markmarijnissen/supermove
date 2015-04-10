@@ -7,6 +7,7 @@ var Supermove = require('./mount');
 Supermove.animate = require('./animate');
 Supermove.resize = require('./resize');
 Supermove.tween = require('./tween');
+Supermove.inc = require('./inc');
 
 // Export to Window
 if(typeof window !== 'undefined'){

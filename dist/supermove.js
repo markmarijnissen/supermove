@@ -53,6 +53,7 @@
 	Supermove.animate = __webpack_require__(3);
 	Supermove.resize = __webpack_require__(4);
 	Supermove.tween = __webpack_require__(5);
+	Supermove.inc = __webpack_require__(19);
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -4536,6 +4537,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var mat4 = __webpack_require__(17).mat4;
+	var inc = __webpack_require__(19);
 	var m = __webpack_require__(1);
 
 	function SurfaceController(){
@@ -4576,43 +4578,7 @@
 	};
 
 	SurfaceController.prototype.inc = function(d){
-		var first,type,val;
-		for(var key in this.data){
-			val = d[key];
-			type = typeof val;
-			switch(key){
-				case 'id': break;
-				case 'content':
-				case 'element':
-					this.data.content = val;
-					break;
-				case 'insert':
-					if(!Array.isArray(this.data.content)){
-						this.data.content = [this.data.content];
-					}
-					if(!Array.isArray(val)){
-						val = [val];
-					}
-					this.data.content = this.data.content.concat(val);
-					break;
-				case 'addClass':
-					if(this.data.element.indexOf(val) < 0) {
-						this.data.element += '.'+val;
-					}
-					break;	
-				case 'removeClass':
-					this.data.element = this.data.element.split('.'+val).join('');
-					break;
-				case 'show':
-					if(val === false){
-						this.data.show = false;
-					}
-					break;
-				default:
-					if(type === 'number')
-						this.data[key] += val; 
-			}
-		}
+		inc(this.data,d);
 		this.setStyle();
 	};
 
@@ -4655,7 +4621,7 @@
 	};
 
 	function SurfaceView(ctrl){
-		var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style, key: ctrl.data.id };
+		var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style };
 		return m(ctrl.data.element,attr,ctrl.data.content);
 	}
 
@@ -9276,6 +9242,57 @@
 	  })(shim.exports);
 	})();
 
+
+/***/ },
+/* 18 */,
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function inc(data){
+		var incs = Array.prototype.slice.call(arguments,1);
+		var first,type,val,key,i,incslen = incs.length;
+		if(incslen === 0) return inc.bind(null,data);
+
+		for(i = 0; i<incslen; i++){
+			for(key in incs[i]){
+				val = incs[i][key];
+				type = typeof val;
+				if(type === 'number' && key !== 'id') {
+					data[key] = (data[key] || 0) + val; 
+				} else switch(key){
+					case 'content':
+					case 'element':
+						data.content = val;
+						break;
+					case 'insert':
+						if(!Array.isArray(data.content)){
+							data.content = [data.content];
+						}
+						if(!Array.isArray(val)){
+							val = [val];
+						}
+						data.content = data.content.concat(val);
+						break;
+					case 'addClass':
+						if(data.element.indexOf(val) < 0) {
+							data.element = (data.element || '') + '.'+val;
+						}
+						break;	
+					case 'removeClass':
+						if(data.element)
+							data.element = data.element.split('.'+val).join('');
+						break;
+					case 'show':
+						if(val === false){
+							data.show = false;
+						}
+						break;
+				}
+			}
+		}
+		
+		return data;
+	};
 
 /***/ }
 /******/ ]);

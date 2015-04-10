@@ -39,7 +39,15 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 		});
 	})
 	.flatten()
+	//.combine(Button(move,2),Supermove.inc)
 	.onValue(move.render);
+
+// var buttons = {
+// 	'1': Button(move,1),
+// 	'2': Button(move,2),
+// 	'3': Button(move,3),
+// 	'4': Button(move,4),
+// };
 
 // rotation incremental
 move.event('click','#1')

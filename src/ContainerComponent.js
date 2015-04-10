@@ -1,4 +1,5 @@
 var mat4 = require('gl-matrix').mat4;
+var inc = require('./inc');
 var m = require('../lib/mithril');
 
 function SurfaceController(){
@@ -39,43 +40,7 @@ SurfaceController.prototype.set = function(d){
 };
 
 SurfaceController.prototype.inc = function(d){
-	var first,type,val;
-	for(var key in this.data){
-		val = d[key];
-		type = typeof val;
-		switch(key){
-			case 'id': break;
-			case 'content':
-			case 'element':
-				this.data.content = val;
-				break;
-			case 'insert':
-				if(!Array.isArray(this.data.content)){
-					this.data.content = [this.data.content];
-				}
-				if(!Array.isArray(val)){
-					val = [val];
-				}
-				this.data.content = this.data.content.concat(val);
-				break;
-			case 'addClass':
-				if(this.data.element.indexOf(val) < 0) {
-					this.data.element += '.'+val;
-				}
-				break;	
-			case 'removeClass':
-				this.data.element = this.data.element.split('.'+val).join('');
-				break;
-			case 'show':
-				if(val === false){
-					this.data.show = false;
-				}
-				break;
-			default:
-				if(type === 'number')
-					this.data[key] += val; 
-		}
-	}
+	inc(this.data,d);
 	this.setStyle();
 };
 
@@ -118,7 +83,7 @@ SurfaceController.prototype.setStyle = function(){
 };
 
 function SurfaceView(ctrl){
-	var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style, key: ctrl.data.id };
+	var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style };
 	return m(ctrl.data.element,attr,ctrl.data.content);
 }
 

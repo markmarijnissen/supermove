@@ -17,14 +17,11 @@ function Button(move,id){
         });
   }
 
-  var clicked = false;
-  var clicks = move.event('click',idStr)
+  var selected = false;
+  var selectedStream = move.event('click',idStr)
     .map(function(){
-      clicked = !clicked;
-      return {
-        id: id,
-        element: clicked? '*.selected':'-.selected'
-      };
+      selected = !selected;
+      return selected? {id:id,addClass:'selected'}:{id:id,removeClass:'selected'};
     });
 
   var hovering = Kefir.constant(false)
@@ -33,10 +30,7 @@ function Button(move,id){
 
   var hoverClass = hovering
     .map(function(hover){
-       return {
-          id: id,
-          element: hover? '*.hover':'-.hover'
-       };
+      return hover? {id:id,addClass:'hover'}:{id:id,removeClass:'hover'};
     });
     
   return hovering
@@ -47,6 +41,5 @@ function Button(move,id){
         { id: id, scaleX: 1.5, scaleY: 1.5 }
     ))
     .merge(hoverClass)
-    .merge(clicks);
-
+    .merge(selectedStream);
 }
