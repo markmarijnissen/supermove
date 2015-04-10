@@ -9,37 +9,38 @@ function Button(move,id){
     return true;
   }
 
-  function toAnimatedTime(hover){
+  function toTime(forwardInTime){
     return Supermove
         .animate(100)
         .map(function(time){
-          return hover? time: 1.0 - time;
+          return forwardInTime? time: 1.0 - time;
         });
   }
 
-  var selected = false;
-  var selectedStream = move.event('click',idStr)
+  var selected = true;
+  var selectedSpec = Kefir.constant(false)
+    .merge(move.event('click',idStr))
     .map(function(){
       selected = !selected;
-      return selected? {id:id,addClass:'selected'}:{id:id,removeClass:'selected'};
+      return selected? { element:'.selected', content:' (ON)'}:{content:' (OFF)'};
     });
 
-  var hovering = Kefir.constant(false)
+  var hoverStream = Kefir.constant(false)
     .merge(move.event('mouseover',idStr).map(toTrue))
     .merge(move.event('mouseout',idStr).map(toFalse));
 
-  var hoverClass = hovering
+  var hoverSpec = hoverStream
     .map(function(hover){
-      return hover? {id:id,addClass:'hover'}:{id:id,removeClass:'hover'};
+      return hover? { element:'.hover'}:null;
     });
-    
-  return hovering
+
+  var scaleSpec = hoverStream
     .debounce(100)
-    .flatMapLatest(toAnimatedTime)
+    .flatMapLatest(toTime)
     .map(Supermove.tween(
-        { id: id, scaleX: 1  , scaleY: 1   },
-        { id: id, scaleX: 1.5, scaleY: 1.5 }
-    ))
-    .merge(hoverClass)
-    .merge(selectedStream);
+        { scaleX: 0  , scaleY: 0   },
+        { scaleX: 0.5, scaleY: 0.5 }
+    ));
+
+  return Kefir.combine([Kefir.constant({id:id}),scaleSpec,hoverSpec,selectedSpec],Supermove.combine);
 }

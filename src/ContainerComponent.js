@@ -1,11 +1,11 @@
 var mat4 = require('gl-matrix').mat4;
-var inc = require('./inc');
 var m = require('../lib/mithril');
+var combine = require('./combine');
 
 function SurfaceController(){
 	this.matrix = mat4.create();
-	this.data = {
-		id: '',
+	this.active = false;
+	this.specs = [{
 		element: '.supermove-surface',
 		show: false,
 		width: 0,
@@ -23,34 +23,54 @@ function SurfaceController(){
 		scaleZ: 1,
 		opacity: 1,
 		content: ''
-	};
-	this.style = "display: none;";
+	}];
+	this.update = this.update.bind(this);
+	this.update();
+	this.callbacks = [null];
 }
 
-SurfaceController.prototype.set = function(d){
-	for(var key in this.data){
-		if(typeof d[key] !== 'undefined'){
-			this.data[key] = d[key];
-		}
-	}
-	if(d.element){
-		this.data.element = d.element + '.supermove-surface';
-	}
-	this.setStyle();
+SurfaceController.prototype.subscribe = function SurfaceSubscribe(stream){
+	var index = this.callbacks.length, specs = this.specs, update = this.update;
+	var callback = function(spec){
+		specs[index] = spec;
+		update();
+	};
+	this.callbacks.push(callback);
+	this.specs.push(null);
+	this.active = true;
+	stream.onValue(callback);
+	return stream;
 };
 
-SurfaceController.prototype.inc = function(d){
-	inc(this.data,d);
-	this.setStyle();
+function notNull(item){
+	return item !== null;
+}
+
+SurfaceController.prototype.unsubscribe = function SurfaceUnsubscribe(stream){
+	var index = this.callbacks.indexOf(stream);
+	if(index >= 0){
+		stream.offValue(this.callbacks[index]);
+		this.callbacks[index] = null;
+		this.specs[index] = null;
+		this.active = this.callbacks.filter(notNull).length > 0;
+		this.update();
+		return true;
+	}
+	return false;
 };
 
 
-SurfaceController.prototype.setStyle = function(){
-	if(this.data.show === false){
+SurfaceController.prototype.update = function(){
+	var d = combine.apply(null,this.specs);
+	this.id = d.id;				// Mithril View: key + id
+								// Mithril View: Style Attribute
+	this.element = d.element;	// Mithril View: Virtual DOM element string
+	this.content = d.content;	// Mithril View: Virtual DOM children / content
+
+	if(d.show === false){
 		this.style = "display: none;";
 		return;
 	}
-	var m = this.matrix, d = this.data;
 	if(d.opacity >= 1) d.opacity = 0.99999;
 	else if(d.opacity <= 0) d.opacity = 0.00001; 
 	// opacity is very low, otherwise Chrome will not render
@@ -64,12 +84,12 @@ SurfaceController.prototype.setStyle = function(){
 	//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
 	this.style = "opacity: "+d.opacity+"; ";
 
+	var m = this.matrix;
 	mat4.identity(m);
 	mat4.translate(m,m,[d.x,d.y,d.z]);
 	if(d.rotateX) mat4.rotateX(m,m,d.rotateX);
 	if(d.rotateY) mat4.rotateY(m,m,d.rotateY);
 	if(d.rotateZ) mat4.rotateZ(m,m,d.rotateZ);
-
 	mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
 	
 	if(d.width){
@@ -83,19 +103,19 @@ SurfaceController.prototype.setStyle = function(){
 };
 
 function SurfaceView(ctrl){
-	var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style };
-	return m(ctrl.data.element,attr,ctrl.data.content);
+	var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
+	return m(ctrl.element,attr,ctrl.content);
 }
 
 function ContainerIndex(id){
 	var index = this._idToIndex[id], surflen = this.surfaces.length;
 	if(typeof index === 'undefined') {
 		index = 0;
-		while(index < surflen && this.surfaces[index].data.show === true) index++;
+		while(index < surflen && this.surfaces[index].active === true) index++;
 		if(index === surflen) {
 			this.surfaces.push(new SurfaceController());
 		} else {
-			var removedId = this.surfaces[index].data.id;
+			var removedId = this.surfaces[index].id;
 			this._idToIndex[removedId] = undefined;
 		}
 		this._idToIndex[id] = index;
@@ -103,20 +123,25 @@ function ContainerIndex(id){
 	return index;
 }
 
-function ContainerGet(id){
+function ContainerSpec(id){
 	var index = ContainerIndex.call(this,id);
-	return this.surfaces[index].data;
+	return combine.apply(null,this.surfaces[index].specs);
 }
 
-function ContainerRender(data){
-	index = ContainerIndex.call(this,data.id);
-	this.surfaces[index].set(data);
+function ContainerSubscribe(id,stream){
+	var index = ContainerIndex.call(this,id);
+	stream = stream.filter(function(data){
+		return data.id === id;
+	});
+	this.surfaces[index].subscribe(stream);
+	return stream;
 }
 
-function ContainerInc(data){
-	index = ContainerIndex.call(this,data.id);
-	this.surfaces[index].inc(data);
+function ContainerUnsubscribe(id,stream){
+	var index = ContainerIndex.call(this,id);
+	return this.surfaces[index].unsubscribe(stream);
 }
+
 
 module.exports = m.component({
 	controller: function ContainerController(api,n){
@@ -126,9 +151,9 @@ module.exports = m.component({
 		for(var i = 0; i<n; i++){
 			this.surfaces[i] = new SurfaceController();
 		}
-		api.render = ContainerRender.bind(this);
-		api.inc = ContainerInc.bind(this);
-		api.element = ContainerGet.bind(this);
+		api.element = ContainerSpec.bind(this);
+		api.subscribe = ContainerSubscribe.bind(this);
+		api.unsubscribe = ContainerUnsubscribe.bind(this);
 	},
 	view: function ContainerView(ctrl){
 		return m('.supermove-container',ctrl.surfaces.map(SurfaceView));

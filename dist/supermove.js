@@ -45,15 +45,15 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(7);
-	__webpack_require__(9);
-	var Kefir = __webpack_require__(10);
+	__webpack_require__(6);
+	var Kefir = __webpack_require__(9);
 	var m = __webpack_require__(1);
 
 	var Supermove = __webpack_require__(2);
 	Supermove.animate = __webpack_require__(3);
 	Supermove.resize = __webpack_require__(4);
 	Supermove.tween = __webpack_require__(5);
-	Supermove.inc = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module \"./inc\""); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+	Supermove.combine = __webpack_require__(18);
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -1212,16 +1212,16 @@
 	if (typeof module != "undefined" && module !== null && module.exports) module.exports = m;
 	else if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {return m}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)(module)))
 
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ContainerComponent = __webpack_require__(11);
-	var DomDelegate = __webpack_require__(15).Delegate;
+	var ContainerComponent = __webpack_require__(10);
+	var DomDelegate = __webpack_require__(13).Delegate;
 	var m = __webpack_require__(1);
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(9);
 
 	function subscribe(eventType,handler,useCapture,callback){
 		this.on(eventType,handler,callback,useCapture);
@@ -1252,7 +1252,7 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(9);
 	var m = __webpack_require__(1);
 	var callbacks = [];
 
@@ -1297,7 +1297,7 @@
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(9);
 
 	module.exports = Kefir.fromEvent(window,'resize')
 		.map(function(event){
@@ -1327,38 +1327,7 @@
 
 
 /***/ },
-/* 6 */,
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// style-loader: Adds some css to the DOM by adding a <style> tag
-
-	// load the styles
-	var content = __webpack_require__(8);
-	if(typeof content === 'string') content = [[module.id, content, '']];
-	// add the styles to the DOM
-	var update = __webpack_require__(12)(content, {});
-	// Hot Module Replacement
-	if(false) {
-		// When the styles change, update the <style> tags
-		module.hot.accept("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css", function() {
-			var newContent = require("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-		// When the module is disposed, remove the <style> tags
-		module.hot.dispose(function() { update(); });
-	}
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	exports = module.exports = __webpack_require__(14)();
-	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
-
-/***/ },
-/* 9 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
@@ -1389,7 +1358,37 @@
 
 
 /***/ },
-/* 10 */
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// style-loader: Adds some css to the DOM by adding a <style> tag
+
+	// load the styles
+	var content = __webpack_require__(8);
+	if(typeof content === 'string') content = [[module.id, content, '']];
+	// add the styles to the DOM
+	var update = __webpack_require__(11)(content, {});
+	// Hot Module Replacement
+	if(false) {
+		// When the styles change, update the <style> tags
+		module.hot.accept("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css", function() {
+			var newContent = require("!!/Users/mark/dev/tmp/supermove/node_modules/css-loader/index.js!/Users/mark/dev/tmp/supermove/src/supermove.css");
+			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+			update(newContent);
+		});
+		// When the module is disposed, remove the <style> tags
+		module.hot.dispose(function() { update(); });
+	}
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	exports = module.exports = __webpack_require__(14)();
+	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
+
+/***/ },
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! Kefir.js v1.3.1
@@ -4533,17 +4532,17 @@
 	}(this));
 
 /***/ },
-/* 11 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var mat4 = __webpack_require__(17).mat4;
-	var inc = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module \"./inc\""); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+	var mat4 = __webpack_require__(16).mat4;
 	var m = __webpack_require__(1);
+	var combine = __webpack_require__(18);
 
 	function SurfaceController(){
 		this.matrix = mat4.create();
-		this.data = {
-			id: '',
+		this.active = false;
+		this.specs = [{
 			element: '.supermove-surface',
 			show: false,
 			width: 0,
@@ -4561,34 +4560,54 @@
 			scaleZ: 1,
 			opacity: 1,
 			content: ''
-		};
-		this.style = "display: none;";
+		}];
+		this.update = this.update.bind(this);
+		this.update();
+		this.callbacks = [null];
 	}
 
-	SurfaceController.prototype.set = function(d){
-		for(var key in this.data){
-			if(typeof d[key] !== 'undefined'){
-				this.data[key] = d[key];
-			}
-		}
-		if(d.element){
-			this.data.element = d.element + '.supermove-surface';
-		}
-		this.setStyle();
+	SurfaceController.prototype.subscribe = function SurfaceSubscribe(stream){
+		var index = this.callbacks.length, specs = this.specs, update = this.update;
+		var callback = function(spec){
+			specs[index] = spec;
+			update();
+		};
+		this.callbacks.push(callback);
+		this.specs.push(null);
+		this.active = true;
+		stream.onValue(callback);
+		return stream;
 	};
 
-	SurfaceController.prototype.inc = function(d){
-		inc(this.data,d);
-		this.setStyle();
+	function notNull(item){
+		return item !== null;
+	}
+
+	SurfaceController.prototype.unsubscribe = function SurfaceUnsubscribe(stream){
+		var index = this.callbacks.indexOf(stream);
+		if(index >= 0){
+			stream.offValue(this.callbacks[index]);
+			this.callbacks[index] = null;
+			this.specs[index] = null;
+			this.active = this.callbacks.filter(notNull).length > 0;
+			this.update();
+			return true;
+		}
+		return false;
 	};
 
 
-	SurfaceController.prototype.setStyle = function(){
-		if(this.data.show === false){
+	SurfaceController.prototype.update = function(){
+		var d = combine.apply(null,this.specs);
+		this.id = d.id;				// Mithril View: key + id
+									// Mithril View: Style Attribute
+		this.element = d.element;	// Mithril View: Virtual DOM element string
+		this.content = d.content;	// Mithril View: Virtual DOM children / content
+
+		if(d.show === false){
 			this.style = "display: none;";
 			return;
 		}
-		var m = this.matrix, d = this.data;
 		if(d.opacity >= 1) d.opacity = 0.99999;
 		else if(d.opacity <= 0) d.opacity = 0.00001; 
 		// opacity is very low, otherwise Chrome will not render
@@ -4602,12 +4621,12 @@
 		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
 		this.style = "opacity: "+d.opacity+"; ";
 
+		var m = this.matrix;
 		mat4.identity(m);
 		mat4.translate(m,m,[d.x,d.y,d.z]);
 		if(d.rotateX) mat4.rotateX(m,m,d.rotateX);
 		if(d.rotateY) mat4.rotateY(m,m,d.rotateY);
 		if(d.rotateZ) mat4.rotateZ(m,m,d.rotateZ);
-
 		mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
 		
 		if(d.width){
@@ -4621,19 +4640,19 @@
 	};
 
 	function SurfaceView(ctrl){
-		var attr = ctrl.data.id?{'style': ctrl.style, id: ctrl.data.id, key: ctrl.data.id }:{'style': ctrl.style };
-		return m(ctrl.data.element,attr,ctrl.data.content);
+		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
+		return m(ctrl.element,attr,ctrl.content);
 	}
 
 	function ContainerIndex(id){
 		var index = this._idToIndex[id], surflen = this.surfaces.length;
 		if(typeof index === 'undefined') {
 			index = 0;
-			while(index < surflen && this.surfaces[index].data.show === true) index++;
+			while(index < surflen && this.surfaces[index].active === true) index++;
 			if(index === surflen) {
 				this.surfaces.push(new SurfaceController());
 			} else {
-				var removedId = this.surfaces[index].data.id;
+				var removedId = this.surfaces[index].id;
 				this._idToIndex[removedId] = undefined;
 			}
 			this._idToIndex[id] = index;
@@ -4641,20 +4660,25 @@
 		return index;
 	}
 
-	function ContainerGet(id){
+	function ContainerSpec(id){
 		var index = ContainerIndex.call(this,id);
-		return this.surfaces[index].data;
+		return combine.apply(null,this.surfaces[index].specs);
 	}
 
-	function ContainerRender(data){
-		index = ContainerIndex.call(this,data.id);
-		this.surfaces[index].set(data);
+	function ContainerSubscribe(id,stream){
+		var index = ContainerIndex.call(this,id);
+		stream = stream.filter(function(data){
+			return data.id === id;
+		});
+		this.surfaces[index].subscribe(stream);
+		return stream;
 	}
 
-	function ContainerInc(data){
-		index = ContainerIndex.call(this,data.id);
-		this.surfaces[index].inc(data);
+	function ContainerUnsubscribe(id,stream){
+		var index = ContainerIndex.call(this,id);
+		return this.surfaces[index].unsubscribe(stream);
 	}
+
 
 	module.exports = m.component({
 		controller: function ContainerController(api,n){
@@ -4664,9 +4688,9 @@
 			for(var i = 0; i<n; i++){
 				this.surfaces[i] = new SurfaceController();
 			}
-			api.render = ContainerRender.bind(this);
-			api.inc = ContainerInc.bind(this);
-			api.element = ContainerGet.bind(this);
+			api.element = ContainerSpec.bind(this);
+			api.subscribe = ContainerSubscribe.bind(this);
+			api.unsubscribe = ContainerUnsubscribe.bind(this);
 		},
 		view: function ContainerView(ctrl){
 			return m('.supermove-container',ctrl.surfaces.map(SurfaceView));
@@ -4674,7 +4698,7 @@
 	});
 
 /***/ },
-/* 12 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -4870,7 +4894,7 @@
 
 
 /***/ },
-/* 13 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -4883,6 +4907,31 @@
 		}
 		return module;
 	}
+
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*jshint browser:true, node:true*/
+
+	'use strict';
+
+	/**
+	 * @preserve Create and manage a DOM event delegator.
+	 *
+	 * @version 0.3.0
+	 * @codingstandard ftlabs-jsv2
+	 * @copyright The Financial Times Limited [All Rights Reserved]
+	 * @license MIT License (see LICENSE.txt)
+	 */
+	var Delegate = __webpack_require__(15);
+
+	module.exports = function(root) {
+	  return new Delegate(root);
+	};
+
+	module.exports.Delegate = Delegate;
 
 
 /***/ },
@@ -4908,31 +4957,6 @@
 
 /***/ },
 /* 15 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*jshint browser:true, node:true*/
-
-	'use strict';
-
-	/**
-	 * @preserve Create and manage a DOM event delegator.
-	 *
-	 * @version 0.3.0
-	 * @codingstandard ftlabs-jsv2
-	 * @copyright The Financial Times Limited [All Rights Reserved]
-	 * @license MIT License (see LICENSE.txt)
-	 */
-	var Delegate = __webpack_require__(16);
-
-	module.exports = function(root) {
-	  return new Delegate(root);
-	};
-
-	module.exports.Delegate = Delegate;
-
-
-/***/ },
-/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*jshint browser:true, node:true*/
@@ -5367,7 +5391,7 @@
 
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -9242,6 +9266,48 @@
 	  })(shim.exports);
 	})();
 
+
+/***/ },
+/* 17 */,
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function combine(){
+		var key,srcVal,destVal,srcType,
+			dest = {}, 
+			sources = Array.prototype.slice.call(arguments,0);
+		for(var i = 0, len = sources.length; i < len; i++){
+			if(sources[i] === null) continue;
+			for(key in sources[i]){
+				srcVal = sources[i][key];
+				srcType = typeof srcVal;
+				if(key === 'id'){
+					if(typeof dest[key] !== 'undefined' && dest[key] !== srcVal){
+						throw new Error('merging specs with different IDs! ('+dest[key]+' != '+srcVal+')');
+					}
+					dest[key] = srcVal;
+				} else if(srcType === 'number'){
+					dest[key] = (dest[key] || 0) + srcVal;
+				} else if(srcType === 'string'){
+					dest[key] = dest[key] || '';
+					if(key !== 'element' || dest[key].indexOf(srcVal) < 0){
+						dest[key] += srcVal;
+					}
+				} else if(srcType === 'boolean'){  // only one SHOW needs to be true?
+					dest[key] = dest[key] || srcVal;
+				} else if(Array.isArray(srcVal)){
+					destVal = dest[key];
+					if(typeof destVal === 'undefined') {
+						destVal = [];
+					} else if(!Array.isArray(destVal)){
+						destVal = [destVal];
+					}
+					dest[key] = destVal.concat(srcVal);
+				}
+			}
+		}
+		return dest;
+	}
 
 /***/ }
 /******/ ]);

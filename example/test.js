@@ -4,7 +4,6 @@ var animator = Kefir.emitter();
 var animation = animator.flatMapLatest(function(duration){
 		return Supermove.animate(duration);
 	});
-
 var mouseX = move.event('mousemove')
 	.merge(Kefir.constant({pageX: 0}))
 	.combine(Supermove.resize)
@@ -13,8 +12,7 @@ var mouseX = move.event('mousemove')
 	})
 	.onValue(m.redraw);
 
-
-Kefir.combine([mouseX,animation],function(mouseX,animation){
+var buttons = Kefir.combine([mouseX,animation],function(mouseX,animation){
 		return (mouseX + animation) % 1.0;
 	})
 	.map(function(i){
@@ -38,57 +36,58 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 			};
 		});
 	})
-	.flatten()
-	//.combine(Button(move,2),Supermove.inc)
-	.onValue(move.render);
+	.flatten();
 
-// var buttons = {
-// 	'1': Button(move,1),
-// 	'2': Button(move,2),
-// 	'3': Button(move,3),
-// 	'4': Button(move,4),
-// };
+move.subscribe(1,buttons);
+move.subscribe(2,buttons);
+move.subscribe(3,buttons);
+move.subscribe(4,buttons);
+
+move.subscribe(1,Button(move,1));
+move.subscribe(2,Button(move,2));
+move.subscribe(3,Button(move,3));
+move.subscribe(4,Button(move,4));
 
 // rotation incremental
-move.event('click','#1')
-	.flatMapLatest(function(){
-		return Supermove.animate(500);
-	})
+var click1 = move.event('click','#1')
 	.map(function(){
-		return {
-			id: 1,
-			rotateY: Math.PI * 0.023
-		};
+		return Supermove.tween(
+			{id:1,rotateY: move.element(1).rotateY},
+			{id:1,rotateY: move.element(1).rotateY + Math.PI * 0.25 }
+		);
 	})
-	.onValue(move.inc);
+	.flatMapLatest(function(tween){
+		return Supermove.animate(500).map(tween);
+	});
+move.subscribe(1,click1);
+
 
 // rotation fixed from 0 ... PI
-move.event('click','#2')
+var click2 = move.event('click','#2')
 	.flatMapLatest(function(){
 		return Supermove.animate(1000);
 	})
     .map(Supermove.tween(
 		{id:2,rotateY: 0},
 		{id:2,rotateY: 0.2 * Math.PI}
-	))
-	.onValue(move.render);
+	));
+move.subscribe(2,click2);
 
 // rotation relative to #1
-move.event('click','#3')
+var click3 = move.event('click','#3')
 	.map(function(){
-		var start = move.element(3).rotateY;
-		var end = move.element(1).rotateY;
 		return Supermove.tween(
-			{id:3,rotateY: start},
-			{id:3,rotateY: end}
+			{id:3,rotateY: move.element(3).rotateY},
+			{id:3,rotateY: move.element(1).rotateY}
 		);
 	})
 	.flatMapLatest(function(tween){
 		return Supermove.animate(500).map(tween);
-	})
-	.onValue(move.render);
+	});
 
-move.event('click','#4')
+move.subscribe(3,click3);
+
+var click4 = move.event('click','#4')
 	.onValue(function(){
 		animator.emit(1000);
 	});
