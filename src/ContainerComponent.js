@@ -59,6 +59,9 @@ SurfaceController.prototype.unsubscribe = function SurfaceUnsubscribe(stream){
 	return false;
 };
 
+function getNumValue(val){		
+	return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+}
 
 SurfaceController.prototype.update = function(){
 	var d = combine.apply(null,this.specs);
@@ -93,12 +96,12 @@ SurfaceController.prototype.update = function(){
 	mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
 	
 	if(d.width){
-		this.style += 'width: '+d.width+'; ';
+		this.style += 'width: '+getNumValue(d.width)+'; ';
 	}
 	if(d.height){
-		this.style += 'height: '+d.height+'; ';
+		this.style += 'height: '+getNumValue(d.height)+'; ';
 	}
-	this.style += 'transform-origin: '+(d.originX * 100)+'% '+(d.originY * 100)+'% 0px; ';
+	this.style += 'transform-origin: '+getNumValue(d.originX)+' '+getNumValue(d.originY)+'% 0px; ';
 	this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 };
 
