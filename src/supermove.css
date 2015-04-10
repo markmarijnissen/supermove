@@ -23,7 +23,8 @@
     -webkit-backface-visibility: visible;
     backface-visibility: visible;
     pointer-events: none;
-    perspective: 500px;
+    perspective: 1000px;
+    perspective-origin: 0 50%;
 }
 
 .supermove-surface {

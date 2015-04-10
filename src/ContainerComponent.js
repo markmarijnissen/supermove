@@ -15,8 +15,11 @@ function SurfaceController(){
 		x: 0,
 		y: 0,
 		z: 0,
-		origin: [0.5, 0.5],
-		scale: [1,1,1],
+		originX: 0.5,
+		originY: 0.5,
+		scaleX: 1,
+		scaleY: 1,
+		scaleZ: 1,
 		opacity: 1,
 		content: ''
 	};
@@ -37,19 +40,14 @@ SurfaceController.prototype.set = function(d){
 
 SurfaceController.prototype.inc = function(d){
 	for(var key in this.data){
-		if(typeof d[key] === 'number' && key !== 'id'){
+		var type = typeof d[key];
+		if(key === 'id'){
+			// do nothing...
+		} else if(type === 'number'){
 			this.data[key] += d[key];
-		} 
-	}
-	if(d.origin){
-		this.data.origin[0] += d.origin[0];
-		this.data.origin[1] += d.origin[1];
-		this.data.origin[2] += d.origin[2];
-	}
-	if(d.scale){
-		this.data.scale[0] += d.scale[0];
-		this.data.scale[1] += d.scale[1];
-		this.data.scale[2] += d.scale[2];
+		} else if(type === 'string' && this.data[key].indexOf(d[key]) < 0) {
+			this.data[key] += d[key];
+		}
 	}
 	this.setStyle();
 };
@@ -80,7 +78,7 @@ SurfaceController.prototype.setStyle = function(){
 	if(d.rotateY) mat4.rotateY(m,m,d.rotateY);
 	if(d.rotateZ) mat4.rotateZ(m,m,d.rotateZ);
 
-	mat4.scale(m,m,d.scale);
+	mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
 	
 	if(d.width){
 		this.style += 'width: '+d.width+'; ';
@@ -88,7 +86,7 @@ SurfaceController.prototype.setStyle = function(){
 	if(d.height){
 		this.style += 'height: '+d.height+'; ';
 	}
-	this.style += 'transform-origin: '+(d.origin[0] * 100)+'% '+(d.origin[1] * 100)+'% 0px; ';
+	this.style += 'transform-origin: '+(d.originX * 100)+'% '+(d.originY * 100)+'% 0px; ';
 	this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
 };
 

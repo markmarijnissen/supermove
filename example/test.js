@@ -24,7 +24,7 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 	.map(function(data){
 		var time = data[0];
 		var size = data[1];
-		return ['Bit-by-bit','Always Flip','Match bit-by-bit','Everybody']
+		return ['Incremental Rotation','Fixed Rotation','Relative Rotation to #1','Trigger Animation']
 			.map(function(text,id){
 			return {
 				id:id + 1,
@@ -32,11 +32,8 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 				show: true,
 				width: '200px',
 				height: '20px',
-				//rotateZ:(Math.round(time * 2 * Math.PI * 1000) / 1000) % (2 * Math.PI),
-				x:size[0] * 0.5,
+				x: time * size[0] - 100,
 				y: size[1] * 0.5 + ((id - 1.5) * 50),
-				scale: [0.5 + 2*time,0.5 + 2*time,1],
-				//z: (Math.round(i * 200) / 1000) % 500,
 				content: text
 			};
 		});
@@ -52,7 +49,7 @@ move.event('click','#1')
 	.map(function(){
 		return {
 			id: 1,
-			rotateY: Math.PI * 0.01
+			rotateY: Math.PI * 0.023
 		};
 	})
 	.onValue(move.inc);
@@ -60,11 +57,11 @@ move.event('click','#1')
 // rotation fixed from 0 ... PI
 move.event('click','#2')
 	.flatMapLatest(function(){
-		return Supermove.animate(500);
+		return Supermove.animate(1000);
 	})
     .map(Supermove.tween(
 		{id:2,rotateY: 0},
-		{id:2,rotateY: Math.PI}
+		{id:2,rotateY: 0.2 * Math.PI}
 	))
 	.onValue(move.render);
 
