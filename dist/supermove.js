@@ -53,7 +53,7 @@
 	Supermove.animate = __webpack_require__(3);
 	Supermove.resize = __webpack_require__(4);
 	Supermove.tween = __webpack_require__(5);
-	Supermove.inc = __webpack_require__(19);
+	Supermove.inc = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module \"./inc\""); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -1321,7 +1321,7 @@
 		} else if(typeof start === 'number'){
 			return start + (end - start) * time;
 		} else {
-			return start;
+			return start || end;
 		}
 	};
 
@@ -4537,7 +4537,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var mat4 = __webpack_require__(17).mat4;
-	var inc = __webpack_require__(19);
+	var inc = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module \"./inc\""); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 	var m = __webpack_require__(1);
 
 	function SurfaceController(){
@@ -9242,57 +9242,6 @@
 	  })(shim.exports);
 	})();
 
-
-/***/ },
-/* 18 */,
-/* 19 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function inc(data){
-		var incs = Array.prototype.slice.call(arguments,1);
-		var first,type,val,key,i,incslen = incs.length;
-		if(incslen === 0) return inc.bind(null,data);
-
-		for(i = 0; i<incslen; i++){
-			for(key in incs[i]){
-				val = incs[i][key];
-				type = typeof val;
-				if(type === 'number' && key !== 'id') {
-					data[key] = (data[key] || 0) + val; 
-				} else switch(key){
-					case 'content':
-					case 'element':
-						data.content = val;
-						break;
-					case 'insert':
-						if(!Array.isArray(data.content)){
-							data.content = [data.content];
-						}
-						if(!Array.isArray(val)){
-							val = [val];
-						}
-						data.content = data.content.concat(val);
-						break;
-					case 'addClass':
-						if(data.element.indexOf(val) < 0) {
-							data.element = (data.element || '') + '.'+val;
-						}
-						break;	
-					case 'removeClass':
-						if(data.element)
-							data.element = data.element.split('.'+val).join('');
-						break;
-					case 'show':
-						if(val === false){
-							data.show = false;
-						}
-						break;
-				}
-			}
-		}
-		
-		return data;
-	};
 
 /***/ }
 /******/ ]);

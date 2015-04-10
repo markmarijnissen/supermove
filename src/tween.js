@@ -10,6 +10,6 @@ module.exports = function tween(start,end,time){
 	} else if(typeof start === 'number'){
 		return start + (end - start) * time;
 	} else {
-		return start;
+		return start || end;
 	}
 };

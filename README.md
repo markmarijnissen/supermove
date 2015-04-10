@@ -4,6 +4,29 @@ Supermove
 
 ## Experimental work in progress !!
 
+The public API is changing a LOT as I find a way to work with components/widgets/modifiers
+that makes sense.
+
+## TODO
+
+* Modifiers/Widgets/Components/Directives/Mixins/Behaviors **!!!!**
+	* How to map an element to a stream in such way you can have:
+		* A base specification
+		* then add modifiers / widgets / angular directives / mixins / behaviors
+	* How to apply a transformation/modifier on ALL elements (to facilitate occlusion culling)
+
+* Various improvements
+	* Remove gl-matrix dependency - extract only needed calculations (see snabbt.js?)
+	* Include easing functions.
+	* Set supermove-root (see famo.us?)
+	* Set perspective
+	* DOM Cache bug - some nodes are free but never used (see dom-cache-test.js)
+	* Occlusion Culling (i.e. fast scrollview)
+
+* Do something cool with transducers?
+
+---
+
 Inspired by the best ideas out there:
 
 * Efficient Layout engine (inspired by famo.us)
@@ -186,13 +209,3 @@ What does Supermove add?
 * Window size Stream: `Supermove.resize`
 * Tween helper: `Supermove.tween(startSpec,endSpec)(time)`
 
-
-TODO
-
-* remove gl-matrix dependency in favor of smaller subset of functions for matrix algebra
-* Easing functions
-* Set supermove-root (see famo.us?)
-* DOM Cache bug - some nodes are free but never used?
-* Occlusion Culling (i.e. fast scrollview)
-* More examples
-* Widgets/Components. Transducers?
