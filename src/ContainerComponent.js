@@ -39,14 +39,41 @@ SurfaceController.prototype.set = function(d){
 };
 
 SurfaceController.prototype.inc = function(d){
+	var first,type,val;
 	for(var key in this.data){
-		var type = typeof d[key];
-		if(key === 'id'){
-			// do nothing...
-		} else if(type === 'number'){
-			this.data[key] += d[key];
-		} else if(type === 'string' && this.data[key].indexOf(d[key]) < 0) {
-			this.data[key] += d[key];
+		val = d[key];
+		type = typeof val;
+		switch(key){
+			case 'id': break;
+			case 'content':
+			case 'element':
+				this.data.content = val;
+				break;
+			case 'insert':
+				if(!Array.isArray(this.data.content)){
+					this.data.content = [this.data.content];
+				}
+				if(!Array.isArray(val)){
+					val = [val];
+				}
+				this.data.content = this.data.content.concat(val);
+				break;
+			case 'addClass':
+				if(this.data.element.indexOf(val) < 0) {
+					this.data.element += '.'+val;
+				}
+				break;	
+			case 'removeClass':
+				this.data.element = this.data.element.split('.'+val).join('');
+				break;
+			case 'show':
+				if(val === false){
+					this.data.show = false;
+				}
+				break;
+			default:
+				if(type === 'number')
+					this.data[key] += val; 
 		}
 	}
 	this.setStyle();
