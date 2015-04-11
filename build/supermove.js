@@ -126,11 +126,17 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var ContainerComponent = __webpack_require__(9);
-	var DomEventStream = __webpack_require__(10);
+	var DomEventStreamFactory = __webpack_require__(23);
 
+	/**
+	 * Create a Supermove instance
+	 *
+	 * - Initialize a dom-delegate (to create DOM Event Streams)
+	 * - Mount a Mithril "ContainerComponent"
+	 */
 	module.exports = function Supermove(el,options){
 		var api = {
-			event: DomEventStream(el)
+			event: DomEventStreamFactory(el)
 			// render -- added by ContainerComponent
 			// spec -- added by ContainerComponent
 		};
@@ -147,33 +153,50 @@
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/**
+	 * merge multiple layout-specification into one.
+	 */
 	module.exports = function merge(){
-		var key,srcVal,destVal,srcType,
+			// tmp vars for key,value,types of source and dest objects.
+		var key,srcVal,destVal,srcType,destType,
+			// destination is a fresh object
 			dest = {}, 
+			// merge all arguments
 			sources = Array.prototype.slice.call(arguments,0);
 		
+		// loop over all layout-specs (arguments)
 		for(var i = 0, len = sources.length; i < len; i++){
 			if(sources[i] === null) continue;
+			
+			// loop over all keys (attributes)
 			for(key in sources[i]){
+				// init values
 				srcVal = sources[i][key];
 				srcType = typeof srcVal;
 				destVal = dest[key];
 				destType = typeof destVal;
+
+				// merge-strategy is based on the key
 				switch(key){
+					// 'id' should be the same, otherwise error
 					case 'id':
 						if(destType !== 'undefined' && destVal !== srcVal){
 							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
 						}
 						dest[key] = srcVal;
 						break;
+					// 'element' is added once (i.e. add class only once)
 					case 'element':
 						if(!destVal || destVal.indexOf(srcVal) < 0){
 							dest[key] = (destVal || '') + srcVal;
 						}
 						break;
+					// 'opacity' is multiplied
 					case 'opacity':
 						dest[key] = (destVal || 1) * srcVal;
 						break;
+
+					// width/height is multiplied (%) or added (px)
 					case 'width':
 					case 'height':
 						if(true){
@@ -181,20 +204,22 @@
 								console.error('[dev] '+key+' is not a number!');
 							}
 						}
-						// multiply a percentages
+						// * for percentages (value is 0..1)
 						if(srcVal <= 1.0 && srcVal >= 0.0) {
 							dest[key] = (destVal || 1) * srcVal;
-						// + on pixels
+						// + for pixels
 						} else {
 							dest[key] = (destVal || 0) + srcVal;
 						}
 						break;
+
+					// for all other keys
 					default:
-						// + on numbers
+						// + for numbers
 						if(srcType === 'number'){
 							dest[key] = (destVal || 0) + srcVal;
 						
-						// append (if not included) on strings
+						// concat for strings
 						} else if(srcType === 'string'){
 							dest[key] = (destVal || '') + srcVal;
 
@@ -202,7 +227,7 @@
 						} else if(srcType === 'boolean'){  
 							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
 						
-						// Append to Arrays
+						// concat on arrays
 						} else if(Array.isArray(srcVal)){
 							if(destType === 'undefined') {
 								destVal = [];
@@ -211,6 +236,7 @@
 							}
 							dest[key] = destVal.concat(srcVal);
 						}
+						// objects and others are not supported...
 				}
 			}
 		}
@@ -3477,148 +3503,8 @@
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(16);
-	var mat4 = __webpack_require__(14);
+	var Surface = __webpack_require__(24);
 	var m = __webpack_require__(19);
-	var merge = __webpack_require__(2);
-
-
-	// for width and height
-	// we assume [0...1] are percentages
-	// while all other value are pixels
-	function getNumValue(val){		
-		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-	}
-
-	// object to array (to work with merge)
-	function getObjectValues(obj){
-		return Object.keys(obj).map(function(key){
-			return obj[key];
-		});
-	}
-
-	/**
-	 * Mithril SurfaceController
-	 *
-	 * Keeps state of a single element.
-	 *
-	 * input: 
-	 * 		this.specs: mapping from behavior => spec
-	 *
-	 * output:
-	 * 		id:    	 element id + Mithril key
-	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
-	 * 		element: Mithril Virtual DOM element string
-	 * 		content: Mithril Virtual DOM content
-	 *
-	 * A Surface listens to multiple specs.
-	 *
-	 * Every spec is called an "behavior".
-	 * All behaviors are merged into a single spec.
-	 * (See merge.js for how merging logic)
-	 *
-	 * public api:
-	 * 		.render(spec)
-	 */
-	function SurfaceController(){
-		this.matrix = mat4.create();
-		this.specs = {
-			'__default__':{
-				element: '.supermove-surface',
-				width: 0,
-				height: 0,
-				rotateX: 0,
-				rotateY: 0,
-				rotateZ: 0,
-				x: 0,
-				y: 0,
-				z: 0,
-				originX: 0.5,
-				originY: 0.5,
-				scaleX: 1,
-				scaleY: 1,
-				scaleZ: 1,
-				opacity: 1,
-				content: ''
-			}
-		};
-
-		this.show = false;
-		this.content = '';
-		this.element = '.supermove-surface';
-	}
-
-	SurfaceController.prototype.update = function SurfaceUpdate(spec){
-		this.specs[spec.behavior || 'main'] = spec;
-		this.calculateStyle();
-	};
-
-	SurfaceController.prototype.calculateStyle = function(){
-		// merge specs into final spec.
-		var spec = merge.apply(null,getObjectValues(this.specs));
-		
-		// update state
-		this.id = spec.id;				// Mithril View: key + id
-		this.show  = spec.show; 		// For Container (to check if it's free)
-		//this.style = .... 			// Mithril View: Style Attribute
-		this.element = spec.element;	// Mithril View: Virtual DOM element string
-		this.content = spec.content;	// Mithril View: Virtual DOM children / content
-
-		// display: none if invisible
-		if(spec.show !== true){
-			this.style = "display: none;";
-			return;
-		}
-
-		// otherwise: calculate style
-		if(spec.opacity >= 1) spec.opacity = 0.99999;
-		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
-		// opacity is very low, otherwise Chrome will not render
-		// which can unpredicted cause flickering / rendering lag
-		// 
-		// We're assuming you have good reason to draw the surface,
-		// even when it's not visible.
-		//  - i.e. fast access (at the cost of more memory)
-		// 
-		// If you want to cleanup the node, set `show` to false
-		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
-		this.style = "opacity: "+spec.opacity+"; ";
-
-		// matrix3d transform
-		var m = this.matrix;
-		mat4.identity(m);
-		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
-		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
-		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
-		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
-		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
-		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
-		
-		// matrix3d transform origin
-		this.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+'% 0px; ';
-		
-		// width and height
-		if(spec.width){
-			this.style += 'width: '+getNumValue(spec.width)+'; ';
-		}
-		if(spec.height){
-			this.style += 'height: '+getNumValue(spec.height)+'; ';
-		}
-	};
-
-	/**
-	 * Mithril View to render a Surface
-	 *
-	 * Needs:
-	 * 	ctrl.id -- element ID and Mithril key (optional)
-	 * 	ctrl.element -- element string
-	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
-	 * 	ctrl.content -- virtual dom content.
-	 */
-	function SurfaceView(ctrl){
-		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
-		return m(ctrl.element,attr,ctrl.content);
-	}
 
 	/**
 	 * Convert Surface ID to an index in the Container.
@@ -3681,44 +3567,18 @@
 			this.surfaces = new Array(n);
 			this._idToIndex = {};
 			for(var i = 0; i<n; i++){
-				this.surfaces[i] = new SurfaceController();
+				this.surfaces[i] = new Surface.controller();
 			}
 			api.spec = ContainerSpec.bind(this);
 			api.render = ContainerUpdate.bind(this);
 		},
 		view: function ContainerView(ctrl){
-			return m('.supermove-container',ctrl.surfaces.map(SurfaceView));
+			return m('.supermove-container',ctrl.surfaces.map(Surface.view));
 		}
 	});
 
 /***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var DomDelegate = __webpack_require__(15).Delegate;
-	var Kefir = __webpack_require__(8);
-
-	function subscribe(eventType,handler,useCapture,callback){
-		this.on(eventType,handler,callback,useCapture);
-	}
-
-	function unsubscribe(eventType,handler,useCapture,callback){
-		this.off(eventType,handler,callback,useCapture);
-	}
-
-	function createDomEventStream(eventType,handler,useCapture){
-		return Kefir.fromSubUnsub(
-			subscribe.bind(this,eventType,handler,useCapture),
-			unsubscribe.bind(this,eventType,handler,useCapture)
-		);
-	}
-
-	module.exports = function DomEventStream(el){
-		var delegate = new DomDelegate(el);
-		return createDomEventStream.bind(delegate);
-	};
-
-/***/ },
+/* 10 */,
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -3970,14 +3830,18 @@
 /* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
-	// set common constants
+	/**
+	 * This file imports the `mat4` file from the `gl-matrix` library.
+	 */
+
+	// Set gl-matrix common constants
 	window.GLMAT_EPSILON = 0.000001;
 	window.GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
 
-	// import actual lib
+	// Import the actual library
 	var mat4 = __webpack_require__(17).mat4;
 
-	// add method for style output
+	// Add method for style output (copied on mat4.str)
 	mat4.style = function (a) {
 	    return 'transform: matrix3d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
 	                    a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
@@ -4013,59 +3877,7 @@
 
 
 /***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
-
-	Redistribution and use in source and binary forms, with or without modification,
-	are permitted provided that the following conditions are met:
-
-	  * Redistributions of source code must retain the above copyright notice, this
-	    list of conditions and the following disclaimer.
-	  * Redistributions in binary form must reproduce the above copyright notice,
-	    this list of conditions and the following disclaimer in the documentation 
-	    and/or other materials provided with the distribution.
-
-	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-	DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-	ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-	(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-	ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
-
-	if(!GLMAT_EPSILON) {
-	    var GLMAT_EPSILON = 0.000001;
-	}
-
-	if(!GLMAT_ARRAY_TYPE) {
-	    var GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
-	}
-
-	/**
-	 * @class Common utilities
-	 * @name glMatrix
-	 */
-	var glMatrix = {};
-
-	/**
-	 * Sets the type of array used when creating new vectors and matricies
-	 *
-	 * @param {Type} type Array type, such as Float32Array or Array
-	 */
-	glMatrix.setMatrixArrayType = function(type) {
-	    GLMAT_ARRAY_TYPE = type;
-	}
-
-	if(true) {
-	    exports.glMatrix = glMatrix;
-	}
-
-/***/ },
+/* 16 */,
 /* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -6586,6 +6398,214 @@
 		return module;
 	}
 
+
+/***/ },
+/* 21 */,
+/* 22 */,
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DomDelegate = __webpack_require__(15).Delegate;
+	var Kefir = __webpack_require__(8);
+
+	/**
+	 * createDomEventStreamFactory(element)
+	 *
+	 * Initialize a DomDelegate instance to create a
+	 * Stream Factory - it's actually a StreamFactory-Factory :)
+	 */
+	function createDomEventStreamFactory(el){
+		var delegate = new DomDelegate(el);
+		return DomEventStreamFactory.bind(delegate);
+	}
+
+	/**
+	 * Stream factory
+	 *
+	 * Create a stream of DOM Events
+	 */
+	function DomEventStreamFactory(eventType,handler,useCapture){
+		// `this` is bound to a dom-delegate instance.
+		// 
+		// We use function.bind() to get a partially applied
+		// 'subscribe' and 'unsubscribe' function.
+		// 
+		// The only argument remaining is the "callback" argument,
+		// which is exactly what Kefir needs.
+		return Kefir.fromSubUnsub(
+			subscribe.bind(this,eventType,handler,useCapture),
+			unsubscribe.bind(this,eventType,handler,useCapture)
+		);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function subscribe(eventType,handler,useCapture,callback){
+		this.on(eventType,handler,callback,useCapture);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function unsubscribe(eventType,handler,useCapture,callback){
+		this.off(eventType,handler,callback,useCapture);
+	}
+
+	module.exports = createDomEventStreamFactory;
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var mat4 = __webpack_require__(14);
+	var merge = __webpack_require__(2);
+
+	// for width and height
+	// we assume [0...1] are percentages
+	// while all other value are pixels
+	function getNumValue(val){		
+		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+	}
+
+	// object to array (to work with merge)
+	function getObjectValues(obj){
+		return Object.keys(obj).map(function(key){
+			return obj[key];
+		});
+	}
+
+	/**
+	 * Mithril SurfaceController
+	 *
+	 * Keeps state of a single element.
+	 *
+	 * input: 
+	 * 		this.specs: mapping from behavior => spec
+	 *
+	 * output:
+	 * 		id:    	 element id + Mithril key
+	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
+	 * 		element: Mithril Virtual DOM element string
+	 * 		content: Mithril Virtual DOM content
+	 *
+	 * A Surface listens to multiple specs.
+	 *
+	 * Every spec is called an "behavior".
+	 * All behaviors are merged into a single spec.
+	 * (See merge.js for how merging logic)
+	 *
+	 * public api:
+	 * 		.render(spec)
+	 */
+	function SurfaceController(){
+		this.matrix = mat4.create();
+		this.specs = {
+			'default':{
+				element: '.supermove-surface',
+				width: 0,
+				height: 0,
+				rotateX: 0,
+				rotateY: 0,
+				rotateZ: 0,
+				x: 0,
+				y: 0,
+				z: 0,
+				originX: 0.5,
+				originY: 0.5,
+				scaleX: 1,
+				scaleY: 1,
+				scaleZ: 1,
+				opacity: 1,
+				content: ''
+			}
+		};
+
+		this.show = false;
+		this.content = '';
+		this.element = '.supermove-surface';
+	}
+
+	SurfaceController.prototype.update = function SurfaceUpdate(spec){
+		this.specs[spec.behavior || 'main'] = spec;
+		this.calculateStyle();
+	};
+
+	SurfaceController.prototype.calculateStyle = function(){
+		// merge specs into final spec.
+		var spec = merge.apply(null,getObjectValues(this.specs));
+		
+		// update state
+		this.id = spec.id;				// Mithril View: key + id
+		this.show  = spec.show; 		// For Container (to check if it's free)
+		//this.style = .... 			// Mithril View: Style Attribute
+		this.element = spec.element;	// Mithril View: Virtual DOM element string
+		this.content = spec.content;	// Mithril View: Virtual DOM children / content
+
+		// display: none if invisible
+		if(spec.show !== true){
+			this.style = "display: none;";
+			return;
+		}
+
+		// otherwise: calculate style
+		if(spec.opacity >= 1) spec.opacity = 0.99999;
+		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
+		// opacity is very low, otherwise Chrome will not render
+		// which can unpredicted cause flickering / rendering lag
+		// 
+		// We're assuming you have good reason to draw the surface,
+		// even when it's not visible.
+		//  - i.e. fast access (at the cost of more memory)
+		// 
+		// If you want to cleanup the node, set `show` to false
+		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
+		this.style = "opacity: "+spec.opacity+"; ";
+
+		// matrix3d transform
+		var m = this.matrix;
+		mat4.identity(m);
+		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
+		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
+		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
+		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
+		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
+		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
+		
+		// matrix3d transform origin
+		this.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+'% 0px; ';
+		
+		// width and height
+		if(spec.width){
+			this.style += 'width: '+getNumValue(spec.width)+'; ';
+		}
+		if(spec.height){
+			this.style += 'height: '+getNumValue(spec.height)+'; ';
+		}
+	};
+
+	/**
+	 * Mithril View to render a Surface
+	 *
+	 * Needs:
+	 * 	ctrl.id -- element ID and Mithril key (optional)
+	 * 	ctrl.element -- element string
+	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
+	 * 	ctrl.content -- virtual dom content.
+	 */
+	function SurfaceView(ctrl){
+		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
+		return m(ctrl.element,attr,ctrl.content);
+	}
+
+	module.exports = {
+		controller: SurfaceController,
+		view: SurfaceView
+	};
 
 /***/ }
 /******/ ]);
