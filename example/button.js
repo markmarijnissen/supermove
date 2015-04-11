@@ -42,5 +42,5 @@ function Button(move,id){
         { scaleX: 0.5, scaleY: 0.5 }
     ));
 
-  return Kefir.combine([Kefir.constant({id:id}),scaleSpec,hoverSpec,selectedSpec],Supermove.combine);
+  return Kefir.combine([Kefir.constant({id:id,behavior:'button'}),scaleSpec,hoverSpec,selectedSpec],Supermove.combine);
 }

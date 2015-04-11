@@ -36,31 +36,26 @@ var buttons = Kefir.combine([mouseX,animation],function(mouseX,animation){
 			};
 		});
 	})
-	.flatten();
+	.flatten()
+	.onValue(move.render);
 
-move.subscribe(1,buttons);
-move.subscribe(2,buttons);
-move.subscribe(3,buttons);
-move.subscribe(4,buttons);
-
-move.subscribe(1,Button(move,1));
-move.subscribe(2,Button(move,2));
-move.subscribe(3,Button(move,3));
-move.subscribe(4,Button(move,4));
+Button(move,1).onValue(move.render);
+Button(move,2).onValue(move.render);
+Button(move,3).onValue(move.render);
+Button(move,4).onValue(move.render);
 
 // rotation incremental
 var click1 = move.event('click','#1')
 	.map(function(){
 		return Supermove.tween(
-			{id:1,rotateY: move.element(1).rotateY},
+			{id:1,rotateY: move.element(1).rotateY, behavior:'onclick'},
 			{id:1,rotateY: move.element(1).rotateY + Math.PI * 0.25 }
 		);
 	})
 	.flatMapLatest(function(tween){
 		return Supermove.animate(500).map(tween);
-	});
-move.subscribe(1,click1);
-
+	})
+	.onValue(move.render);
 
 // rotation fixed from 0 ... PI
 var click2 = move.event('click','#2')
@@ -68,24 +63,23 @@ var click2 = move.event('click','#2')
 		return Supermove.animate(1000);
 	})
     .map(Supermove.tween(
-		{id:2,rotateY: 0},
+		{id:2,rotateY: 0, behavior:'onclick'},
 		{id:2,rotateY: 0.2 * Math.PI}
-	));
-move.subscribe(2,click2);
+	))
+	.onValue(move.render);
 
 // rotation relative to #1
 var click3 = move.event('click','#3')
 	.map(function(){
 		return Supermove.tween(
-			{id:3,rotateY: move.element(3).rotateY},
+			{id:3,rotateY: move.element(3).rotateY, behavior:'onclick'},
 			{id:3,rotateY: move.element(1).rotateY}
 		);
 	})
 	.flatMapLatest(function(tween){
 		return Supermove.animate(500).map(tween);
-	});
-
-move.subscribe(3,click3);
+	})
+	.onValue(move.render);
 
 var click4 = move.event('click','#4')
 	.onValue(function(){

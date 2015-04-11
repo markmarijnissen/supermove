@@ -3,11 +3,11 @@ require('polyfill-function-prototype-bind');
 var Kefir = require('kefir');
 var m = require('../lib/mithril');
 
-var Supermove = require('./mount');
-Supermove.animate = require('./animate');
-Supermove.resize = require('./resize');
-Supermove.tween = require('./tween');
-Supermove.combine = require('./combine');
+var Supermove = require('./core/create');
+Supermove.combine = require('./core/combine');
+Supermove.animate = require('./extras/animate');
+Supermove.resize = require('./extras/resize');
+Supermove.tween = require('./extras/tween');
 Supermove.VERSION = VERSION;
 
 // Export to Window

@@ -1,6 +1,6 @@
 var ContainerComponent = require('./ContainerComponent');
 var DomDelegate = require('dom-delegate').Delegate;
-var m = require('../lib/mithril');
+var m = require('../../lib/mithril');
 var Kefir = require('kefir');
 
 function subscribe(eventType,handler,useCapture,callback){
@@ -18,7 +18,7 @@ function createDomEventStream(eventType,handler,useCapture){
 	);
 }
 
-module.exports = function mount(el,n){
+module.exports = function Supermove(el,n){
 	var delegate = new DomDelegate(el);
 	var api = {
 		event: createDomEventStream.bind(delegate)

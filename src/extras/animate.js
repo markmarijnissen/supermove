@@ -1,5 +1,5 @@
 var Kefir = require('kefir');
-var m = require('../lib/mithril');
+var m = require('../../lib/mithril');
 var callbacks = [];
 
 function step(time){

@@ -49,11 +49,11 @@
 	var Kefir = __webpack_require__(10);
 	var m = __webpack_require__(1);
 
-	var Supermove = __webpack_require__(2);
-	Supermove.animate = __webpack_require__(3);
-	Supermove.resize = __webpack_require__(4);
-	Supermove.tween = __webpack_require__(5);
-	Supermove.combine = __webpack_require__(6);
+	var Supermove = __webpack_require__(19);
+	Supermove.combine = __webpack_require__(20);
+	Supermove.animate = __webpack_require__(21);
+	Supermove.resize = __webpack_require__(22);
+	Supermove.tween = __webpack_require__(23);
 	Supermove.VERSION = ("0.1.0");
 
 	// Export to Window
@@ -1220,192 +1220,11 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)(module)))
 
 /***/ },
-/* 2 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ContainerComponent = __webpack_require__(11);
-	var DomDelegate = __webpack_require__(15).Delegate;
-	var m = __webpack_require__(1);
-	var Kefir = __webpack_require__(10);
-
-	function subscribe(eventType,handler,useCapture,callback){
-		this.on(eventType,handler,callback,useCapture);
-	}
-
-	function unsubscribe(eventType,handler,useCapture,callback){
-		this.off(eventType,handler,callback,useCapture);
-	}
-
-	function createDomEventStream(eventType,handler,useCapture){
-		return Kefir.fromSubUnsub(
-			subscribe.bind(this,eventType,handler,useCapture),
-			unsubscribe.bind(this,eventType,handler,useCapture)
-		);
-	}
-
-	module.exports = function mount(el,n){
-		var delegate = new DomDelegate(el);
-		var api = {
-			event: createDomEventStream.bind(delegate)
-		};
-		m.mount(el,ContainerComponent(api,n));
-		return api;
-	};
-
-
-/***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Kefir = __webpack_require__(10);
-	var m = __webpack_require__(1);
-	var callbacks = [];
-
-	function step(time){
-		var len = callbacks.length;
-		if(len > 0){
-			for(var i = len-1; i >= 0; i--){
-				if(!callbacks[i].start) {
-					callbacks[i].start = time;
-				} 
-				if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
-					callbacks[i](1);
-					unsubscribe(callbacks[i]);
-				} else {
-					callbacks[i]((time - callbacks[i].start) / callbacks[i].duration);	
-				}
-			}
-			m.redraw(true);
-			window.requestAnimationFrame(step);
-		}
-	}
-
-	function createSubscribe(duration){
-		return function subscribe(callback){
-			var index = callbacks.length;
-			callbacks.push(callback);
-			callback.duration = duration || 1;
-			if(index === 0) window.requestAnimationFrame(step);
-		};
-	}
-
-	function unsubscribe(callback){
-		var index = callbacks.indexOf(callback);
-		if(index >= 0) callbacks.splice(index,1);
-	}
-
-	module.exports = function animate(duration){
-		return Kefir.fromSubUnsub(createSubscribe(duration),unsubscribe);
-	};
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Kefir = __webpack_require__(10);
-
-	module.exports = Kefir.fromEvent(window,'resize')
-		.map(function(event){
-			return [event.target.innerWidth,event.target.innerHeight];
-		})
-		.toProperty([window.innerWidth,window.innerHeight]);
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function tween(start,end,time){
-		if(typeof time === 'undefined') {
-			return tween.bind(null,start,end);
-		} else if(typeof start === 'object'){
-			var data = {};
-			for(var key in start){
-				data[key] = tween(start[key],end[key],time);
-			}
-			return data;
-		} else if(typeof start === 'number'){
-			return start + (end - start) * time;
-		} else {
-			return start || end;
-		}
-	};
-
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function combine(){
-		var key,srcVal,destVal,srcType,
-			dest = {}, 
-			sources = Array.prototype.slice.call(arguments,0);
-		
-		for(var i = 0, len = sources.length; i < len; i++){
-			if(sources[i] === null) continue;
-			for(key in sources[i]){
-				srcVal = sources[i][key];
-				srcType = typeof srcVal;
-				destVal = dest[key];
-				destType = typeof destVal;
-				switch(key){
-					case 'id':
-						if(destType !== 'undefined' && destVal !== srcVal){
-							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
-						}
-						dest[key] = srcVal;
-						break;
-					case 'element':
-						if(!destVal || destVal.indexOf(srcVal) < 0){
-							dest[key] = (destVal || '') + srcVal;
-						}
-						break;
-					case 'opacity':
-						dest[key] = (destVal || 1) * srcVal;
-						break;
-					case 'width':
-					case 'height':
-						if(true){
-							if(srcType !== 'number'){
-								console.error('[dev] '+key+' is not a number!');
-							}
-						}
-						// multiply a percentages
-						if(srcVal <= 1.0 && srcVal >= 0.0) {
-							dest[key] = (destVal || 1) * srcVal;
-						// + on pixels
-						} else {
-							dest[key] = (destVal || 0) + srcVal;
-						}
-						break;
-					default:
-						// + on numbers
-						if(srcType === 'number'){
-							dest[key] = (destVal || 0) + srcVal;
-						
-						// append (if not included) on strings
-						} else if(srcType === 'string'){
-							dest[key] = (destVal || '') + srcVal;
-
-						// && on booleans
-						} else if(srcType === 'boolean'){  
-							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
-						
-						// Append to Arrays
-						} else if(Array.isArray(srcVal)){
-							if(destType === 'undefined') {
-								destVal = [];
-							} else if(!Array.isArray(destVal)){
-								destVal = [destVal];
-							}
-							dest[key] = destVal.concat(srcVal);
-						}
-				}
-			}
-		}
-		return dest;
-	};
-
-/***/ },
+/* 2 */,
+/* 3 */,
+/* 4 */,
+/* 5 */,
+/* 6 */,
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -4611,174 +4430,7 @@
 	}(this));
 
 /***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var mat4 = __webpack_require__(16).mat4;
-	var m = __webpack_require__(1);
-	var combine = __webpack_require__(6);
-
-	function SurfaceController(){
-		this.matrix = mat4.create();
-		this.active = false;
-		this.specs = [{
-			element: '.supermove-surface',
-			width: 0,
-			height: 0,
-			rotateX: 0,
-			rotateY: 0,
-			rotateZ: 0,
-			x: 0,
-			y: 0,
-			z: 0,
-			originX: 0.5,
-			originY: 0.5,
-			scaleX: 1,
-			scaleY: 1,
-			scaleZ: 1,
-			opacity: 1,
-			content: ''
-		}];
-		this.update = this.update.bind(this);
-		this.update();
-		this.callbacks = [null];
-	}
-
-	SurfaceController.prototype.subscribe = function SurfaceSubscribe(stream){
-		var index = this.callbacks.length, specs = this.specs, update = this.update;
-		var callback = function(spec){
-			specs[index] = spec;
-			update();
-		};
-		this.callbacks.push(callback);
-		this.specs.push(null);
-		this.active = true;
-		stream.onValue(callback);
-		return stream;
-	};
-
-	function notNull(item){
-		return item !== null;
-	}
-
-	SurfaceController.prototype.unsubscribe = function SurfaceUnsubscribe(stream){
-		var index = this.callbacks.indexOf(stream);
-		if(index >= 0){
-			stream.offValue(this.callbacks[index]);
-			this.callbacks[index] = null;
-			this.specs[index] = null;
-			this.active = this.callbacks.filter(notNull).length > 0;
-			this.update();
-			return true;
-		}
-		return false;
-	};
-
-	function getNumValue(val){		
-		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-	}
-
-	SurfaceController.prototype.update = function(){
-		var d = combine.apply(null,this.specs);
-		this.id = d.id;				// Mithril View: key + id
-									// Mithril View: Style Attribute
-		this.element = d.element;	// Mithril View: Virtual DOM element string
-		this.content = d.content;	// Mithril View: Virtual DOM children / content
-
-		if(d.show !== true){
-			this.style = "display: none;";
-			return;
-		}
-		if(d.opacity >= 1) d.opacity = 0.99999;
-		else if(d.opacity <= 0) d.opacity = 0.00001; 
-		// opacity is very low, otherwise Chrome will not render
-		// which can unpredicted cause flickering / rendering lag
-		// 
-		// We're assuming you have good reason to draw the surface,
-		// even when it's not visible.
-		//  - i.e. fast access (at the cost of more memory)
-		// 
-		// If you want to cleanup the node, set `show` to false
-		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
-		this.style = "opacity: "+d.opacity+"; ";
-
-		var m = this.matrix;
-		mat4.identity(m);
-		mat4.translate(m,m,[d.x,d.y,d.z]);
-		if(d.rotateX) mat4.rotateX(m,m,d.rotateX);
-		if(d.rotateY) mat4.rotateY(m,m,d.rotateY);
-		if(d.rotateZ) mat4.rotateZ(m,m,d.rotateZ);
-		mat4.scale(m,m,[d.scaleX,d.scaleY,d.scaleZ]);
-		
-		if(d.width){
-			this.style += 'width: '+getNumValue(d.width)+'; ';
-		}
-		if(d.height){
-			this.style += 'height: '+getNumValue(d.height)+'; ';
-		}
-		this.style += 'transform-origin: '+getNumValue(d.originX)+' '+getNumValue(d.originY)+'% 0px; ';
-		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
-	};
-
-	function SurfaceView(ctrl){
-		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
-		return m(ctrl.element,attr,ctrl.content);
-	}
-
-	function ContainerIndex(id){
-		var index = this._idToIndex[id], surflen = this.surfaces.length;
-		if(typeof index === 'undefined') {
-			index = 0;
-			while(index < surflen && this.surfaces[index].active === true) index++;
-			if(index === surflen) {
-				this.surfaces.push(new SurfaceController());
-			} else {
-				var removedId = this.surfaces[index].id;
-				this._idToIndex[removedId] = undefined;
-			}
-			this._idToIndex[id] = index;
-		}
-		return index;
-	}
-
-	function ContainerSpec(id){
-		var index = ContainerIndex.call(this,id);
-		return combine.apply(null,this.surfaces[index].specs);
-	}
-
-	function ContainerSubscribe(id,stream){
-		var index = ContainerIndex.call(this,id);
-		stream = stream.filter(function(data){
-			return data.id === id;
-		});
-		this.surfaces[index].subscribe(stream);
-		return stream;
-	}
-
-	function ContainerUnsubscribe(id,stream){
-		var index = ContainerIndex.call(this,id);
-		return this.surfaces[index].unsubscribe(stream);
-	}
-
-
-	module.exports = m.component({
-		controller: function ContainerController(api,n){
-			n = n || 50;
-			this.surfaces = new Array(n);
-			this._idToIndex = {};
-			for(var i = 0; i<n; i++){
-				this.surfaces[i] = new SurfaceController();
-			}
-			api.element = ContainerSpec.bind(this);
-			api.subscribe = ContainerSubscribe.bind(this);
-			api.unsubscribe = ContainerUnsubscribe.bind(this);
-		},
-		view: function ContainerView(ctrl){
-			return m('.supermove-container',ctrl.surfaces.map(SurfaceView));
-		}
-	});
-
-/***/ },
+/* 11 */,
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -9347,6 +8999,337 @@
 	  this.root();
 	};
 
+
+/***/ },
+/* 18 */,
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var ContainerComponent = __webpack_require__(24);
+	var DomDelegate = __webpack_require__(15).Delegate;
+	var m = __webpack_require__(1);
+	var Kefir = __webpack_require__(10);
+
+	function subscribe(eventType,handler,useCapture,callback){
+		this.on(eventType,handler,callback,useCapture);
+	}
+
+	function unsubscribe(eventType,handler,useCapture,callback){
+		this.off(eventType,handler,callback,useCapture);
+	}
+
+	function createDomEventStream(eventType,handler,useCapture){
+		return Kefir.fromSubUnsub(
+			subscribe.bind(this,eventType,handler,useCapture),
+			unsubscribe.bind(this,eventType,handler,useCapture)
+		);
+	}
+
+	module.exports = function Supermove(el,n){
+		var delegate = new DomDelegate(el);
+		var api = {
+			event: createDomEventStream.bind(delegate)
+		};
+		m.mount(el,ContainerComponent(api,n));
+		return api;
+	};
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function combine(){
+		var key,srcVal,destVal,srcType,
+			dest = {}, 
+			sources = Array.prototype.slice.call(arguments,0);
+		
+		for(var i = 0, len = sources.length; i < len; i++){
+			if(sources[i] === null) continue;
+			for(key in sources[i]){
+				srcVal = sources[i][key];
+				srcType = typeof srcVal;
+				destVal = dest[key];
+				destType = typeof destVal;
+				switch(key){
+					case 'id':
+						if(destType !== 'undefined' && destVal !== srcVal){
+							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
+						}
+						dest[key] = srcVal;
+						break;
+					case 'element':
+						if(!destVal || destVal.indexOf(srcVal) < 0){
+							dest[key] = (destVal || '') + srcVal;
+						}
+						break;
+					case 'opacity':
+						dest[key] = (destVal || 1) * srcVal;
+						break;
+					case 'width':
+					case 'height':
+						if(true){
+							if(srcType !== 'number'){
+								console.error('[dev] '+key+' is not a number!');
+							}
+						}
+						// multiply a percentages
+						if(srcVal <= 1.0 && srcVal >= 0.0) {
+							dest[key] = (destVal || 1) * srcVal;
+						// + on pixels
+						} else {
+							dest[key] = (destVal || 0) + srcVal;
+						}
+						break;
+					default:
+						// + on numbers
+						if(srcType === 'number'){
+							dest[key] = (destVal || 0) + srcVal;
+						
+						// append (if not included) on strings
+						} else if(srcType === 'string'){
+							dest[key] = (destVal || '') + srcVal;
+
+						// && on booleans
+						} else if(srcType === 'boolean'){  
+							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
+						
+						// Append to Arrays
+						} else if(Array.isArray(srcVal)){
+							if(destType === 'undefined') {
+								destVal = [];
+							} else if(!Array.isArray(destVal)){
+								destVal = [destVal];
+							}
+							dest[key] = destVal.concat(srcVal);
+						}
+				}
+			}
+		}
+		return dest;
+	};
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Kefir = __webpack_require__(10);
+	var m = __webpack_require__(1);
+	var callbacks = [];
+
+	function step(time){
+		var len = callbacks.length;
+		if(len > 0){
+			for(var i = len-1; i >= 0; i--){
+				if(!callbacks[i].start) {
+					callbacks[i].start = time;
+				} 
+				if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
+					callbacks[i](1);
+					unsubscribe(callbacks[i]);
+				} else {
+					callbacks[i]((time - callbacks[i].start) / callbacks[i].duration);	
+				}
+			}
+			m.redraw(true);
+			window.requestAnimationFrame(step);
+		}
+	}
+
+	function createSubscribe(duration){
+		return function subscribe(callback){
+			var index = callbacks.length;
+			callbacks.push(callback);
+			callback.duration = duration || 1;
+			if(index === 0) window.requestAnimationFrame(step);
+		};
+	}
+
+	function unsubscribe(callback){
+		var index = callbacks.indexOf(callback);
+		if(index >= 0) callbacks.splice(index,1);
+	}
+
+	module.exports = function animate(duration){
+		return Kefir.fromSubUnsub(createSubscribe(duration),unsubscribe);
+	};
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Kefir = __webpack_require__(10);
+
+	module.exports = Kefir.fromEvent(window,'resize')
+		.map(function(event){
+			return [event.target.innerWidth,event.target.innerHeight];
+		})
+		.toProperty([window.innerWidth,window.innerHeight]);
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function tween(start,end,time){
+		if(typeof time === 'undefined') {
+			return tween.bind(null,start,end);
+		} else if(typeof start === 'object'){
+			var data = {};
+			for(var key in start){
+				data[key] = tween(start[key],end[key],time);
+			}
+			return data;
+		} else if(typeof start === 'number'){
+			return start + (end - start) * time;
+		} else {
+			return start || end;
+		}
+	};
+
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var mat4 = __webpack_require__(16).mat4;
+	var m = __webpack_require__(1);
+	var combine = __webpack_require__(20);
+
+	function notNull(item){
+		return item !== null;
+	}
+
+	function getNumValue(val){		
+		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+	}
+
+	function getObjectValues(obj){
+		return Object.keys(obj).map(function(key){
+			return obj[key];
+		});
+	}
+
+	function SurfaceController(){
+		this.matrix = mat4.create();
+		this.show = false;
+		this.specs = {
+			'default':{
+				element: '.supermove-surface',
+				width: 0,
+				height: 0,
+				rotateX: 0,
+				rotateY: 0,
+				rotateZ: 0,
+				x: 0,
+				y: 0,
+				z: 0,
+				originX: 0.5,
+				originY: 0.5,
+				scaleX: 1,
+				scaleY: 1,
+				scaleZ: 1,
+				opacity: 1,
+				content: ''
+			}
+		};
+		this.calculateStyle = this.calculateStyle.bind(this);
+		this.calculateStyle();
+	}
+
+	SurfaceController.prototype.update = function SurfaceUpdate(spec){
+		this.specs[spec.behavior || 'main'] = spec;
+		this.calculateStyle();
+	};
+
+	SurfaceController.prototype.calculateStyle = function(){
+		var spec = combine.apply(null,getObjectValues(this.specs));
+		this.id = spec.id;				// Mithril View: key + id
+		this.show  = spec.show; 		// For Container (to check if it's free)
+										// Mithril View: Style Attribute
+		this.element = spec.element;	// Mithril View: Virtual DOM element string
+		this.content = spec.content;	// Mithril View: Virtual DOM children / content
+
+		if(spec.show !== true){
+			this.style = "display: none;";
+			return;
+		}
+		if(spec.opacity >= 1) spec.opacity = 0.99999;
+		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
+		// opacity is very low, otherwise Chrome will not render
+		// which can unpredicted cause flickering / rendering lag
+		// 
+		// We're assuming you have good reason to draw the surface,
+		// even when it's not visible.
+		//  - i.e. fast access (at the cost of more memory)
+		// 
+		// If you want to cleanup the node, set `show` to false
+		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
+		this.style = "opacity: "+spec.opacity+"; ";
+
+		var m = this.matrix;
+		mat4.identity(m);
+		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
+		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
+		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
+		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
+		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
+		
+		if(spec.width){
+			this.style += 'width: '+getNumValue(spec.width)+'; ';
+		}
+		if(spec.height){
+			this.style += 'height: '+getNumValue(spec.height)+'; ';
+		}
+		this.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+'% 0px; ';
+		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
+	};
+
+	function SurfaceView(ctrl){
+		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
+		return m(ctrl.element,attr,ctrl.content);
+	}
+
+	function ContainerIndex(id){
+		var index = this._idToIndex[id], surflen = this.surfaces.length;
+		if(typeof index === 'undefined') {
+			index = 0;
+			while(index < surflen && this.surfaces[index].show === true) index++;
+			if(index === surflen) {
+				this.surfaces.push(new SurfaceController());
+			} else {
+				var removedId = this.surfaces[index].id;
+				this._idToIndex[removedId] = undefined;
+			}
+			this._idToIndex[id] = index;
+		}
+		return index;
+	}
+
+	function ContainerSpec(id){
+		var index = ContainerIndex.call(this,id);
+		return combine.apply(null,this.surfaces[index].specs);
+	}
+
+	function ContainerUpdate(value){
+		var index = ContainerIndex.call(this,value.id);
+		this.surfaces[index].update(value);
+	}
+
+	module.exports = m.component({
+		controller: function ContainerController(api,n){
+			n = n || 50;
+			this.surfaces = new Array(n);
+			this._idToIndex = {};
+			for(var i = 0; i<n; i++){
+				this.surfaces[i] = new SurfaceController();
+			}
+			api.element = ContainerSpec.bind(this);
+			api.render = ContainerUpdate.bind(this);
+		},
+		view: function ContainerView(ctrl){
+			return m('.supermove-container',ctrl.surfaces.map(SurfaceView));
+		}
+	});
 
 /***/ }
 /******/ ]);
