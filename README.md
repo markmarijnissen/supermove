@@ -2,41 +2,9 @@ Supermove
 ---------
 > A functional reactive virtual DOM layout engine, powered by Mithril and Kefir.
 
-## Experimental work in progress !!
-
-## TODO
-
-* Bugs
-	* Button "(OFF)" text only appears after first hover...?
-	* DOM Cache bug - some nodes are free but never used (see dom-cache-test.js)	
-
-* Various improvements
-	* Include easing functions.
-	* Set supermove-root (see famo.us?)
-	* Set perspective
-	* Occlusion Culling (i.e. fast scrollview)
-
-* Do something cool with transducers?
-
----
-
-Inspired by the best ideas out there:
-
-* Efficient Layout engine (inspired by famo.us)
-	* Flat DOM
-	* CSS3 matrix3d transformation to position elements
-	* Cache DOM nodes
-* Layout specification (inspired by famo.us & snabbt.js)
-* Model/View/Intent (inspired by CycleJS)
-* Functional reactive programming (Supermove uses Kefir)
-* Virtual DOM (Supermove uses Mithril)
-
-Example: Open `index.html` and see `test.js`
-
 ## The Vision
 
-A fast, efficient, easy-to-use library for creating
-and animating app layouts.
+A superfast, easy-to-use library for creating complex animated user interfaces.
 
 * Friendly developer API
 * Targets mobile devices (iOS/Android apps with Cordova)
@@ -48,28 +16,80 @@ and animating app layouts.
 	* Link multiple elements and animations together
 * Reusable widgets / components / behaviors
 
+---
 
-## Idea
+## Experimental work in progress
 
-Transform input (user input, time, model-data) to a layout-specification.
+The public API is currently in heavy flux. After working out how 
+to deal with containers/groups, I expect the API to be more stable.
 
-1. Input
-	* From DOM events using `move.event(....)` 
-	* From TIME using `Supermove.animate(500)`
-	* From other data sources, such as an AJAX call.
-2. Model: Transform input to one or more Layout-Specification events.
-	* Merge inputs: `Kefir.combine([a,b,c], function(a,b,c) { .... })`
-	* map, filter, reduce, etc
-	* map to `layout-specification` data
-3. Render: Subscribe to Layout-Specification stream.
+### TODO
 
-### The layout specification:
+* Current
+	* **Working out how to deal with containers/groups**
+* Next
+	* Easing functions
+	* Set supermove-root (see famo.us?)
+	* Set perspective
+	* [bug] Button "(OFF)" text only appears after first hover.
+* Later
+	* Occlusion Culling (i.e. fast scrollview)
+	* Draggable input stream (i.e. combine several DOM Event Streams into something meaningful)
+* Even later
+	* Physics input stream (using Matter.js?)
+	* Pinch/Rotate input stream (re-using famo.us' Input Syncs?)
+	* Write unit tests.
+	* Multiple independent Supermove Containers on one page.
+	* [bug] DOM Cache - some nodes are free but never used (see dom-cache-test.js)	
+	* [bug] DOM Cache - does not check for element tag type.
+	* Transduce something.
+
+### DONE
+
+* Surface: A Mithril component that transforms a LayoutSpec to a matrix3d transform.
+* DOM Cache Container: A Mithril component
+* Mithril + Kefir - Render by subscribing to a stream.
+* DOM Event Streams - Use `dom-delegate` to create input streams.
+* Behaviors - compose a single element out of multiple behaviors (e.g. mixins, directives, components)
+
+---
+
+## The Idea: Transform input to layout
+
+The idea is simple: A user interface transforms input streams to layout specifications.
+
+```javascript
+		// 1. Input Stream
+	move.event('click','#submit')
+		// 2. Transform to layout
+		.map(function(){
+			return {
+				id: 'submit',
+				content: 'clicked submit!'
+			}
+		})
+		// 3. Render
+		.onValue(move.render);
+```
+
+**Input**
+
+This can be anything:
+	* A DOM event using `move.event(....)` 
+	* A time value using `Supermove.animate(500)`
+	* Position, size, etc from other elements.
+	* Other data sources, such as data from your business logic or an AJAX call.
+
+**Layout**
+
+A layout has multiple elements. Each element is positioned using a **one or more** `layout-specification`:
+
 ```javascript
 var spec = {
-		id: 'submit',			// required unique ID for element
+		id: '',					// required unique ID for element
 		behavior: 'main'		// name for the behavior
-		element: '.text.class'  // mithril' virtual DOM element for wrapper surface.
-		show: false,	
+		element: '.supermove-surface' // mithril' virtual DOM element for wrapper surface.
+		show: false,			
 		width: 0,				// For [0..1] unit is '%', otherwise 'px'
 		height: 0,				// For [0..1] unit is '%', otherwise 'px'
 		rotateX: 0,
@@ -84,26 +104,26 @@ var spec = {
 		scaleY: 1,
 		scaleZ: 1,
 		opacity: 1,
-		content: m('div','Hello World')	// mithril' Virtual DOM
+		content: ''	// mithril' Virtual DOM, i.e. m('div','Hello World')
 	}
 ```
 Everything is optional, except for the `id` to specify the target element.
 
-### Behaviors
+In order to facilitate mixins, components and directives, a single element can have
+more than one layout-specification. When rendering, all layout-specifications are [merged
+into one](src/core/combine.js). 
 
-An single element can merge multiple Layout Specifications. This is called a **behavior**.
+Every layout-specification on an element is called an **behavior**. Behaviors are
+similar to mixins, components, widgets or directives.
 
-For example:
+For example, a button element might have several behaviors:
 
 * `button`: Add a hover-animation
 * `data`: Add the button text
 * `layout`: Set x,y,width,height
 * `router`: Control visibility depending on url.
-* `default`: Default behavior (see above)
 
-You can define a behavior using the `behavior` attribute in the `layout-specification`. When rendering, all different behaviors are merged into a single spec. See [combine.js](src/core/combine.js).
-
-You can also use `Supermove.combine` to manually merge multipe specs into one. See the [button.js](src/behaviors/button.js) component.
+You can also use `Supermove.combine` to manually merge multipe specs into one. See the [button.js](src/behaviors/button.js) component for an example.
 
 ## Usage
 Create a Supermove to an element
@@ -128,13 +148,13 @@ Window size:
 Supermove.resize
 ```
 
-Layout Specification from another element:
+layout-specification from another element:
 ```javascript
 var childWidth = move.spec('parent').width * 0.5;
 // Note: move.spec() is NOT a stream, unlike the others!
 ```
 
-### Model / Transform
+### Transform
 
 Transform intent to layout-specification:
 ```javascript
@@ -152,7 +172,7 @@ var modelStream =
 
 ### Render
 
-Simply subscribe to a stream with `move.render`
+Subscribe to a stream with `move.render`
 ```javascript
 modelStream.onValue(move.render)
 ```
@@ -184,6 +204,25 @@ npm run prepublish
 ```
 
 Feel free to contribute to this project in any way. The easiest way to support this project is by giving it a star.
+
+## Credits
+
+* **Mithril**, included as Virtual DOM rendering engine.
+* **Kefir**, included as FRP library to handle streams.
+* **gl-matrix**, partially included (only mat4).
+* **dom-delegate**, included to create DOM Event Streams.
+
+Inspired by famo.us:
+
+* **famo.us**
+	* `Surface` as name for an element
+	* Using the `matrix3d` transform to do the layout.
+	* Keeping the DOM as flat as possible.
+	* CSS stylesheet.
+	* Caching DOM nodes.
+	* Specifying layout using opacity, scale, translate, etc.
+	* Input Syncs (pinch, rotate, etc)
+
 
 ## Contact
 -   @markmarijnissen
