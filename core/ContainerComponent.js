@@ -1,7 +1,7 @@
 require('gl-matrix/src/gl-matrix/common');
 var mat4 = require('./mat4');
-var m = require('../../lib/mithril');
-var combine = require('./combine');
+var m = require('../lib/mithril');
+var merge = require('./merge');
 
 
 // for width and height
@@ -11,7 +11,7 @@ function getNumValue(val){
 	return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
 }
 
-// object to array (to work with combine)
+// object to array (to work with merge)
 function getObjectValues(obj){
 	return Object.keys(obj).map(function(key){
 		return obj[key];
@@ -36,7 +36,7 @@ function getObjectValues(obj){
  *
  * Every spec is called an "behavior".
  * All behaviors are merged into a single spec.
- * (See combine.js for how merging logic)
+ * (See merge.js for how merging logic)
  *
  * public api:
  * 		.render(spec)
@@ -44,7 +44,7 @@ function getObjectValues(obj){
 function SurfaceController(){
 	this.matrix = mat4.create();
 	this.specs = {
-		'default':{
+		'__default__':{
 			element: '.supermove-surface',
 			width: 0,
 			height: 0,
@@ -76,7 +76,7 @@ SurfaceController.prototype.update = function SurfaceUpdate(spec){
 
 SurfaceController.prototype.calculateStyle = function(){
 	// merge specs into final spec.
-	var spec = combine.apply(null,getObjectValues(this.specs));
+	var spec = merge.apply(null,getObjectValues(this.specs));
 	
 	// update state
 	this.id = spec.id;				// Mithril View: key + id
@@ -165,12 +165,12 @@ function ContainerIndex(id){
 }
 
 /**
- * Return combined spec of a Surface.
+ * Return merged spec of a Surface.
  * Create Surface if ID does not have an index yet.
  */
 function ContainerSpec(id){
 	var index = ContainerIndex.call(this,id);
-	return combine.apply(null,getObjectValues(this.surfaces[index].specs));
+	return merge.apply(null,getObjectValues(this.surfaces[index].specs));
 }
 
 /**

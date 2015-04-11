@@ -2,7 +2,7 @@
   "name": "supermove",
   "version": "0.2.2",
   "description": "Functional Reactive Virtual Dom Layout Engine",
-  "main": "./src/supermove.js",
+  "main": "./supermove.js",
   "scripts": {
     "prepublish": "webpack && webpack --minify",
     "test": "echo \"Error: no test specified\" && exit 1"

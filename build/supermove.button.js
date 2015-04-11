@@ -2,28 +2,35 @@ webpackJsonp([0],[
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(8);
+
+	function toFalse(){
+	  return false;
+	}
+
+	function toTrue(){
+	  return true;
+	}
+
+	function hoverAnimationStream(forwardInTime){
+	  return Supermove
+	      .animate(100)
+	      .map(function(time){
+	        return forwardInTime? time: 1.0 - time;
+	      });
+	}
 
 	function Button(move,id){
 	  var idStr = '#'+id;
-
-	  function toFalse(){
-	    return false;
-	  }
-
-	  function toTrue(){
-	    return true;
-	  }
-
-	  function toTime(forwardInTime){
-	    return Supermove
-	        .animate(100)
-	        .map(function(time){
-	          return forwardInTime? time: 1.0 - time;
-	        });
-	  }
-
 	  var selected = true;
+
+	  // Base spec
+	  var baseSpec = Kefir.constant({
+	    id:id,
+	    behavior:'button'
+	  });
+
+	  // Click spec: clicks --> toggle .selected class
 	  var selectedSpec = Kefir.constant(false)
 	    .merge(move.event('click',idStr))
 	    .map(function(){
@@ -31,30 +38,38 @@ webpackJsonp([0],[
 	      return selected? { element:'.selected', content:' (ON)'}:{content:' (OFF)'};
 	    });
 
+	  // hover -->
 	  var hoverStream = Kefir.constant(false)
 	    .merge(move.event('mouseover',idStr).map(toTrue))
 	    .merge(move.event('mouseout',idStr).map(toFalse));
 
+	  // Hover Class spec: 
+	  // hover --> toggle .hover class
 	  var hoverSpec = hoverStream
 	    .map(function(hover){
 	      return hover? { element:'.hover'}:null;
 	    });
 
+	  // Hover Animation spec:
+	  // hover --> trigger animation
 	  var scaleSpec = hoverStream
-	    .debounce(100)
-	    .flatMapLatest(toTime)
+	    .flatMapLatest(hoverAnimationStream)
 	    .map(Supermove.tween(
 	        { scaleX: 0  , scaleY: 0   },
 	        { scaleX: 0.5, scaleY: 0.5 }
 	    ));
 
+	  // Merge all specs into one behavior
 	  Kefir.combine([
-	    Kefir.constant({id:id,behavior:'button'}),
+	    baseSpec,
 	    scaleSpec,
 	    hoverSpec,
-	    selectedSpec
-	  ],Supermove.combine)
-	    .onValue(move.render);
+	    selectedSpec,
+	  ],Supermove.merge)
+	  // log (debug)
+	  //.log('button '+id)
+	  // immediatly render button
+	  .onValue(move.render);
 	}
 
 	Supermove.button = Button;

@@ -102,7 +102,7 @@ Everything is optional, except for the `id` to specify the target element.
 
 In order to facilitate mixins, components and directives, a single element can have
 more than one layout-specification. When rendering, all layout-specifications are [merged
-into one](src/core/combine.js). 
+into one](src/core/merge.js). 
 
 Every layout-specification on an element is called an **behavior**. Behaviors are
 similar to mixins, components, widgets or directives.
@@ -114,7 +114,7 @@ For example, a button element might have several behaviors:
 * `layout`: Set x,y,width,height
 * `router`: Control visibility depending on url.
 
-You can also use `Supermove.combine` to manually merge multipe specs into one. See the [button.js](src/behaviors/button.js) component for an example.
+You can also use `Supermove.merge` to manually merge multipe specs into one. See the [button.js](src/behaviors/button.js) component for an example.
 
 ## Usage
 Create a Supermove to an element

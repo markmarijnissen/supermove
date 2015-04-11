@@ -1,4 +1,4 @@
-module.exports = function combine(){
+module.exports = function merge(){
 	var key,srcVal,destVal,srcType,
 		dest = {}, 
 		sources = Array.prototype.slice.call(arguments,0);

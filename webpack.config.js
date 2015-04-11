@@ -8,11 +8,11 @@ var filename = argv.minify? 'supermove.min.js':'supermove.js';
 var config = {
 	context: __dirname,
     entry: {
-      "supermove":__dirname + "/src/supermove",
-      "supermove.button": __dirname + "/src/behaviors/button"
+      "supermove":__dirname + "/supermove",
+      "supermove.button": __dirname + "/behavior/button"
     },
     output: {
-        path: __dirname + "/dist",
+        path: __dirname + "/build",
         filename: argv.minify? "[name].min.js":"[name].js"
     },
     plugins:[
