@@ -91,6 +91,7 @@ Everything is optional, except for the `id` to specify the target element.
 An single element can merge multiple Layout Specifications. This is called a **behavior**.
 
 For example:
+
 	* `button`: Add a hover-animation
 	* `data`: Add the button text
 	* `layout`: Set x,y,width,height
@@ -125,8 +126,9 @@ Supermove.resize
 ```
 
 Layout Specification from another element:
-```
+```javascript
 var childWidth = move.spec('parent').width * 0.5;
+// Note: move.spec() is NOT a stream, unlike the others!
 ```
 
 ### Model:
