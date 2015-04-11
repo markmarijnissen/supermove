@@ -6,7 +6,7 @@
     "Mark Marijnissen <markmarijnissen@gmail.com>"
   ],
   "description": "Functional reactive virtual dom layout engine",
-  "main": "build/supermove.js",
+  "main": "build/supermove.lib.js",
   "keywords": [
     "famo.us",
     "mithril",

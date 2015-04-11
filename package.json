@@ -4,7 +4,7 @@
   "description": "Functional Reactive Virtual Dom Layout Engine",
   "main": "./supermove.js",
   "scripts": {
-    "prepublish": "webpack && webpack --minify",
+    "prepublish": "webpack && webpack --lib",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

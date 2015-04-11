@@ -1,18 +1,16 @@
 var webpack = require('webpack');
 var argv = require('optimist')
             .alias('m','minify')
-            .alias('l','without-libs')
+            .alias('l','lib')
             .argv;
 
-// configure mapping
+// include libraries or not?
 var alias;
-if(!argv.l) {
-  // with libraries:
+if(argv.lib) {
   alias = {
     'mithril': __dirname + '/lib/mithril'
   };
 } else {
-  // without libraries:
   alias = {
     'mithril':__dirname + '/lib/external-mithril',
     'kefir':__dirname+ '/lib/external-kefir'
@@ -22,8 +20,7 @@ if(!argv.l) {
 var config = {
 	context: __dirname,
     entry: {
-      "supermove":__dirname + "/supermove",
-      "supermove.button": __dirname + "/behavior/button"
+      "supermove":__dirname + "/supermove"
     },
     resolve:{
       alias: alias
@@ -60,8 +57,12 @@ if(argv.minify){
   }));
 }
 
+if(argv.lib){
+  config.entry = {'supermove':config.entry.supermove};
+}
+
 function filename(name){
-  if(argv.l) name += '.nolibs';
+  if(argv.lib) name += '.lib';
   if(argv.m) name += '.min';
   return name + '.js';
 }
