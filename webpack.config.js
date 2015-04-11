@@ -3,6 +3,8 @@ var argv = require('optimist')
             .alias('m','minify')
             .argv;
 
+var filename = argv.minify? 'supermove.min.js':'supermove.js';
+
 var config = {
 	context: __dirname,
     entry: {
@@ -18,7 +20,7 @@ var config = {
             SUPERMOVE_DEVELOPMENT: !argv.minify,
             VERSION: JSON.stringify(require('./package.json').version)
         }),
-        new webpack.optimize.CommonsChunkPlugin("supermove","supermove.js")
+        new webpack.optimize.CommonsChunkPlugin("supermove",filename)
     ],
     module: {
         loaders: [
@@ -39,7 +41,6 @@ if(argv.minify){
       comments: false
     }
   }));
-  config.output.filename = 'supermove.min.js';
 }
 
 module.exports = config;
