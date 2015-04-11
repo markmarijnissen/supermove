@@ -1,5 +1,5 @@
 var Surface = require('./SurfaceComponent');
-var m = require('../lib/mithril');
+var m = require('mithril');
 
 /**
  * Convert Surface ID to an index in the Container.

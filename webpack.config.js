@@ -1,9 +1,23 @@
 var webpack = require('webpack');
 var argv = require('optimist')
             .alias('m','minify')
+            .alias('l','without-libs')
             .argv;
 
-var filename = argv.minify? 'supermove.min.js':'supermove.js';
+// configure mapping
+var alias;
+if(!argv.l) {
+  // with libraries:
+  alias = {
+    'mithril': __dirname + '/lib/mithril'
+  };
+} else {
+  // without libraries:
+  alias = {
+    'mithril':__dirname + '/lib/external-mithril',
+    'kefir':__dirname+ '/lib/external-kefir'
+  };
+}
 
 var config = {
 	context: __dirname,
@@ -11,16 +25,19 @@ var config = {
       "supermove":__dirname + "/supermove",
       "supermove.button": __dirname + "/behavior/button"
     },
+    resolve:{
+      alias: alias
+    },
     output: {
         path: __dirname + "/build",
-        filename: argv.minify? "[name].min.js":"[name].js"
+        filename: filename('[name]')
     },
     plugins:[
         new webpack.DefinePlugin({
             SUPERMOVE_DEVELOPMENT: !argv.minify,
             VERSION: JSON.stringify(require('./package.json').version)
         }),
-        new webpack.optimize.CommonsChunkPlugin("supermove",filename)
+        new webpack.optimize.CommonsChunkPlugin("supermove",filename('supermove'))
     ],
     module: {
         loaders: [
@@ -41,6 +58,12 @@ if(argv.minify){
       comments: false
     }
   }));
+}
+
+function filename(name){
+  if(argv.l) name += '.nolibs';
+  if(argv.m) name += '.min';
+  return name + '.js';
 }
 
 module.exports = config;

@@ -99,11 +99,11 @@
 
 	__webpack_require__(7);
 	__webpack_require__(9);
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(12);
 	var m = __webpack_require__(1);
 
-	var Supermove = __webpack_require__(3);
-	Supermove.merge = __webpack_require__(2);
+	var Supermove = __webpack_require__(2);
+	Supermove.merge = __webpack_require__(3);
 	Supermove.animate = __webpack_require__(4);
 	Supermove.resize = __webpack_require__(5);
 	Supermove.tween = __webpack_require__(6);
@@ -1276,6 +1276,34 @@
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var ContainerComponent = __webpack_require__(10);
+	var DomEventStreamFactory = __webpack_require__(11);
+
+	/**
+	 * Create a Supermove instance
+	 *
+	 * - Initialize a dom-delegate (to create DOM Event Streams)
+	 * - Mount a Mithril "ContainerComponent"
+	 */
+	module.exports = function Supermove(el,options){
+		var api = {
+			event: DomEventStreamFactory(el)
+			// render -- added by ContainerComponent
+			// spec -- added by ContainerComponent
+		};
+		m.mount(el,ContainerComponent(api,options));
+
+		// Magic Javascript Trick - 
+		// you can explicitly return an instance
+		// when using `new Supermove()`
+		return api;
+	};
+
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/**
 	 * merge multiple layout-specification into one.
 	 */
@@ -1367,38 +1395,10 @@
 	};
 
 /***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ContainerComponent = __webpack_require__(11);
-	var DomEventStreamFactory = __webpack_require__(12);
-
-	/**
-	 * Create a Supermove instance
-	 *
-	 * - Initialize a dom-delegate (to create DOM Event Streams)
-	 * - Mount a Mithril "ContainerComponent"
-	 */
-	module.exports = function Supermove(el,options){
-		var api = {
-			event: DomEventStreamFactory(el)
-			// render -- added by ContainerComponent
-			// spec -- added by ContainerComponent
-		};
-		m.mount(el,ContainerComponent(api,options));
-
-		// Magic Javascript Trick - 
-		// you can explicitly return an instance
-		// when using `new Supermove()`
-		return api;
-	};
-
-
-/***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(12);
 	var m = __webpack_require__(1);
 	var callbacks = [];
 
@@ -1443,7 +1443,7 @@
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(12);
 
 	module.exports = Kefir.fromEvent(window,'resize')
 		.map(function(event){
@@ -1539,6 +1539,141 @@
 
 /***/ },
 /* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Surface = __webpack_require__(16);
+	var m = __webpack_require__(1);
+
+	/**
+	 * Convert Surface ID to an index in the Container.
+	 *
+	 * If Surface ID does not exist, it will fetch a
+	 * cached Surface. If there are no cached surfaces, 
+	 * it will create a new one.
+	 */
+	function ContainerIndex(id){
+		var index = this._idToIndex[id], surflen = this.surfaces.length;
+		if(typeof index === 'undefined') {
+			index = 0;
+			while(index < surflen && this.surfaces[index].show === true) index++;
+			if(index === surflen) {
+				this.surfaces.push(new SurfaceController());
+			} else {
+				var removedId = this.surfaces[index].id;
+				this._idToIndex[removedId] = undefined;
+			}
+			this._idToIndex[id] = index;
+		}
+		return index;
+	}
+
+	/**
+	 * Return merged spec of a Surface.
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function ContainerSpec(id){
+		var index = ContainerIndex.call(this,id);
+		return merge.apply(null,getObjectValues(this.surfaces[index].specs));
+	}
+
+	/**
+	 * Update specification of a Surface
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function ContainerUpdate(value){
+		var index = ContainerIndex.call(this,value.id);
+		this.surfaces[index].update(value);
+	}
+
+	/**
+	 * Mithril ContainerComponent
+	 *
+	 * A Virtual DOM Container to manage Surfaces.
+	 *
+	 * The ContainerComponent keeps a cache of DOM Nodes.
+	 * Every surface ID is mapped to an index in the DOM Cache.
+	 * If a Surface is invisible (i.e. show = false), it can
+	 * be reused by a new surface.
+	 *
+	 * Public API:
+	 *  .spec(id) --> return Surface spec for an ID
+	 *  .render(spec) --> update Surface spec
+	 */
+	module.exports = m.component({
+		controller: function ContainerController(api,options){
+			var n = options.cache || 20;
+			this.surfaces = new Array(n);
+			this._idToIndex = {};
+			for(var i = 0; i<n; i++){
+				this.surfaces[i] = new Surface.controller();
+			}
+			api.spec = ContainerSpec.bind(this);
+			api.render = ContainerUpdate.bind(this);
+		},
+		view: function ContainerView(ctrl){
+			return m('.supermove-container',ctrl.surfaces.map(Surface.view));
+		}
+	});
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DomDelegate = __webpack_require__(17).Delegate;
+	var Kefir = __webpack_require__(12);
+
+	/**
+	 * createDomEventStreamFactory(element)
+	 *
+	 * Initialize a DomDelegate instance to create a
+	 * Stream Factory - it's actually a StreamFactory-Factory :)
+	 */
+	function createDomEventStreamFactory(el){
+		var delegate = new DomDelegate(el);
+		return DomEventStreamFactory.bind(delegate);
+	}
+
+	/**
+	 * Stream factory
+	 *
+	 * Create a stream of DOM Events
+	 */
+	function DomEventStreamFactory(eventType,handler,useCapture){
+		// `this` is bound to a dom-delegate instance.
+		// 
+		// We use function.bind() to get a partially applied
+		// 'subscribe' and 'unsubscribe' function.
+		// 
+		// The only argument remaining is the "callback" argument,
+		// which is exactly what Kefir needs.
+		return Kefir.fromSubUnsub(
+			subscribe.bind(this,eventType,handler,useCapture),
+			unsubscribe.bind(this,eventType,handler,useCapture)
+		);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function subscribe(eventType,handler,useCapture,callback){
+		this.on(eventType,handler,callback,useCapture);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function unsubscribe(eventType,handler,useCapture,callback){
+		this.off(eventType,handler,callback,useCapture);
+	}
+
+	module.exports = createDomEventStreamFactory;
+
+/***/ },
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! Kefir.js v1.3.1
@@ -4682,141 +4817,6 @@
 	}(this));
 
 /***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Surface = __webpack_require__(16);
-	var m = __webpack_require__(1);
-
-	/**
-	 * Convert Surface ID to an index in the Container.
-	 *
-	 * If Surface ID does not exist, it will fetch a
-	 * cached Surface. If there are no cached surfaces, 
-	 * it will create a new one.
-	 */
-	function ContainerIndex(id){
-		var index = this._idToIndex[id], surflen = this.surfaces.length;
-		if(typeof index === 'undefined') {
-			index = 0;
-			while(index < surflen && this.surfaces[index].show === true) index++;
-			if(index === surflen) {
-				this.surfaces.push(new SurfaceController());
-			} else {
-				var removedId = this.surfaces[index].id;
-				this._idToIndex[removedId] = undefined;
-			}
-			this._idToIndex[id] = index;
-		}
-		return index;
-	}
-
-	/**
-	 * Return merged spec of a Surface.
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerSpec(id){
-		var index = ContainerIndex.call(this,id);
-		return merge.apply(null,getObjectValues(this.surfaces[index].specs));
-	}
-
-	/**
-	 * Update specification of a Surface
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerUpdate(value){
-		var index = ContainerIndex.call(this,value.id);
-		this.surfaces[index].update(value);
-	}
-
-	/**
-	 * Mithril ContainerComponent
-	 *
-	 * A Virtual DOM Container to manage Surfaces.
-	 *
-	 * The ContainerComponent keeps a cache of DOM Nodes.
-	 * Every surface ID is mapped to an index in the DOM Cache.
-	 * If a Surface is invisible (i.e. show = false), it can
-	 * be reused by a new surface.
-	 *
-	 * Public API:
-	 *  .spec(id) --> return Surface spec for an ID
-	 *  .render(spec) --> update Surface spec
-	 */
-	module.exports = m.component({
-		controller: function ContainerController(api,options){
-			var n = options.cache || 20;
-			this.surfaces = new Array(n);
-			this._idToIndex = {};
-			for(var i = 0; i<n; i++){
-				this.surfaces[i] = new Surface.controller();
-			}
-			api.spec = ContainerSpec.bind(this);
-			api.render = ContainerUpdate.bind(this);
-		},
-		view: function ContainerView(ctrl){
-			return m('.supermove-container',ctrl.surfaces.map(Surface.view));
-		}
-	});
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var DomDelegate = __webpack_require__(17).Delegate;
-	var Kefir = __webpack_require__(10);
-
-	/**
-	 * createDomEventStreamFactory(element)
-	 *
-	 * Initialize a DomDelegate instance to create a
-	 * Stream Factory - it's actually a StreamFactory-Factory :)
-	 */
-	function createDomEventStreamFactory(el){
-		var delegate = new DomDelegate(el);
-		return DomEventStreamFactory.bind(delegate);
-	}
-
-	/**
-	 * Stream factory
-	 *
-	 * Create a stream of DOM Events
-	 */
-	function DomEventStreamFactory(eventType,handler,useCapture){
-		// `this` is bound to a dom-delegate instance.
-		// 
-		// We use function.bind() to get a partially applied
-		// 'subscribe' and 'unsubscribe' function.
-		// 
-		// The only argument remaining is the "callback" argument,
-		// which is exactly what Kefir needs.
-		return Kefir.fromSubUnsub(
-			subscribe.bind(this,eventType,handler,useCapture),
-			unsubscribe.bind(this,eventType,handler,useCapture)
-		);
-	}
-
-	/**
-	 * Subscribe to DOM-Events
-	 *
-	 * Note: `this` is bound to a dom-delegate instance
-	 */
-	function subscribe(eventType,handler,useCapture,callback){
-		this.on(eventType,handler,callback,useCapture);
-	}
-
-	/**
-	 * Subscribe to DOM-Events
-	 *
-	 * Note: `this` is bound to a dom-delegate instance
-	 */
-	function unsubscribe(eventType,handler,useCapture,callback){
-		this.off(eventType,handler,callback,useCapture);
-	}
-
-	module.exports = createDomEventStreamFactory;
-
-/***/ },
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -5054,7 +5054,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var mat4 = __webpack_require__(18);
-	var merge = __webpack_require__(2);
+	var merge = __webpack_require__(3);
 
 	// for width and height
 	// we assume [0...1] are percentages

@@ -1,7 +1,7 @@
 require('./supermove.css');
 require('polyfill-function-prototype-bind');
 var Kefir = require('kefir');
-var m = require('./lib/mithril');
+var m = require('mithril');
 
 var Supermove = require('./core/create');
 Supermove.merge = require('./core/merge');
