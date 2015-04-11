@@ -1,4 +1,5 @@
-var mat4 = require('gl-matrix').mat4;
+require('gl-matrix/src/gl-matrix/common');
+var mat4 = require('./mat4');
 var m = require('../../lib/mithril');
 var combine = require('./combine');
 

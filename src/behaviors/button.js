@@ -1,3 +1,5 @@
+var Kefir = require('kefir');
+
 function Button(move,id){
   var idStr = '#'+id;
 
@@ -44,3 +46,6 @@ function Button(move,id){
 
   return Kefir.combine([Kefir.constant({id:id,behavior:'button'}),scaleSpec,hoverSpec,selectedSpec],Supermove.combine);
 }
+
+Supermove.button = Button;
+module.exports = Button;

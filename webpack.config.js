@@ -1,19 +1,24 @@
 var webpack = require('webpack');
 var argv = require('optimist')
-            .alias('m','minify');
+            .alias('m','minify')
+            .argv;
 
 var config = {
 	context: __dirname,
-    entry: __dirname + "/src/supermove",
+    entry: {
+      "supermove":__dirname + "/src/supermove",
+      "supermove.button": __dirname + "/src/behaviors/button"
+    },
     output: {
         path: __dirname + "/dist",
-        filename: "supermove.js"
+        filename: "[name].js"
     },
     plugins:[
         new webpack.DefinePlugin({
             SUPERMOVE_DEVELOPMENT: !argv.minify,
             VERSION: JSON.stringify(require('./package.json').version)
-        })
+        }),
+        new webpack.optimize.CommonsChunkPlugin("supermove","supermove.js")
     ],
     module: {
         loaders: [
@@ -23,17 +28,18 @@ var config = {
 };
 
 if(argv.minify){
-    delete config.devtool;
+  delete config.devtool;
   config.plugins.push(new webpack.optimize.UglifyJsPlugin({
     mangle:true,
     compress:{
-      drop_console:false,
-      drop_debugger: false
+      drop_console:true,
+      drop_debugger: true
     },
     output: {
       comments: false
     }
   }));
+  config.output.filename = 'supermove.min.js';
 }
 
 module.exports = config;
