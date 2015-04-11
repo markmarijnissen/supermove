@@ -1,6 +1,6 @@
 {
   "name": "supermove",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Functional Reactive Virtual Dom Layout Engine",
   "main": "./src/supermove.js",
   "scripts": {

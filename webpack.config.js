@@ -13,7 +13,7 @@ var config = {
     },
     output: {
         path: __dirname + "/dist",
-        filename: "[name].js"
+        filename: argv.minify? "[name].min.js":"[name].js"
     },
     plugins:[
         new webpack.DefinePlugin({

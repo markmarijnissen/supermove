@@ -98,8 +98,8 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(7);
-	__webpack_require__(10);
-	var Kefir = __webpack_require__(9);
+	__webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 	var m = __webpack_require__(1);
 
 	var Supermove = __webpack_require__(2);
@@ -107,7 +107,7 @@
 	Supermove.animate = __webpack_require__(4);
 	Supermove.resize = __webpack_require__(5);
 	Supermove.tween = __webpack_require__(6);
-	Supermove.VERSION = ("0.2.1");
+	Supermove.VERSION = ("0.2.2");
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -117,7 +117,7 @@
 	}
 
 	if(true){
-		console.log('Supermove '+("0.2.1")+' (developer build)');
+		console.log('Supermove '+("0.2.2")+' (developer build)');
 	}
 	module.exports = Supermove;
 
@@ -1372,7 +1372,7 @@
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 	var m = __webpack_require__(1);
 	var callbacks = [];
 
@@ -1417,7 +1417,7 @@
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 
 	module.exports = Kefir.fromEvent(window,'resize')
 		.map(function(event){
@@ -1482,6 +1482,37 @@
 
 /***/ },
 /* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
+	if (!Function.prototype.bind) {
+	  Function.prototype.bind = function (oThis) {
+	    if (typeof this !== "function") {
+	      // closest thing possible to the ECMAScript 5
+	      // internal IsCallable function
+	      throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
+	    }
+
+	    var aArgs = Array.prototype.slice.call(arguments, 1), 
+	        fToBind = this, 
+	        fNOP = function () {},
+	        fBound = function () {
+	          return fToBind.apply(this instanceof fNOP && oThis
+	                 ? this
+	                 : oThis,
+	                 aArgs.concat(Array.prototype.slice.call(arguments)));
+	        };
+
+	    fNOP.prototype = this.prototype;
+	    fBound.prototype = new fNOP();
+
+	    return fBound;
+	  };
+	}
+
+
+/***/ },
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! Kefir.js v1.3.1
@@ -4625,37 +4656,6 @@
 	}(this));
 
 /***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
-	if (!Function.prototype.bind) {
-	  Function.prototype.bind = function (oThis) {
-	    if (typeof this !== "function") {
-	      // closest thing possible to the ECMAScript 5
-	      // internal IsCallable function
-	      throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
-	    }
-
-	    var aArgs = Array.prototype.slice.call(arguments, 1), 
-	        fToBind = this, 
-	        fNOP = function () {},
-	        fBound = function () {
-	          return fToBind.apply(this instanceof fNOP && oThis
-	                 ? this
-	                 : oThis,
-	                 aArgs.concat(Array.prototype.slice.call(arguments)));
-	        };
-
-	    fNOP.prototype = this.prototype;
-	    fBound.prototype = new fNOP();
-
-	    return fBound;
-	  };
-	}
-
-
-/***/ },
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -4878,7 +4878,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var DomDelegate = __webpack_require__(17).Delegate;
-	var Kefir = __webpack_require__(9);
+	var Kefir = __webpack_require__(10);
 
 	function subscribe(eventType,handler,useCapture,callback){
 		this.on(eventType,handler,callback,useCapture);
