@@ -1,18 +1,10 @@
 (function(){
-  var Kefir,Supermove;
   /**
-   * For now, support both browser and CommonJS
+   * Not included in Supermove library.
+   * 
+   * For now, only for browsers - i.e no require, 
+   * we assume Supermove and Kefir globals.
    */
-  if(typeof module !== 'undefined') {
-    Kefir = require('kefir');
-    Supermove = require('../supermove');
-    module.exports = Button;
-  } else {
-    Kefir = window.Kefir;
-    Supermove = window.Supermove;
-    Supermove.button = Button;
-  }
-
   function toFalse(){
     return false;
   }
@@ -80,4 +72,6 @@
     // immediatly render button
     .onValue(move.render);
   }
+
+  Supermove.button = Button;
 })();
