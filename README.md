@@ -6,11 +6,14 @@ Supermove
 
 ## TODO
 
+* Bugs
+	* Button "(OFF)" text only appears after first hover...?
+	* DOM Cache bug - some nodes are free but never used (see dom-cache-test.js)	
+
 * Various improvements
 	* Include easing functions.
 	* Set supermove-root (see famo.us?)
 	* Set perspective
-	* DOM Cache bug - some nodes are free but never used (see dom-cache-test.js)
 	* Occlusion Culling (i.e. fast scrollview)
 
 * Do something cool with transducers?
@@ -64,7 +67,7 @@ Transform input (user input, time, model-data) to a layout-specification.
 ```javascript
 var spec = {
 		id: 'submit',			// required unique ID for element
-		behavior: '...'			// name for the behavior
+		behavior: 'main'		// name for the behavior
 		element: '.text.class'  // mithril' virtual DOM element for wrapper surface.
 		show: false,	
 		width: 0,				// For [0..1] unit is '%', otherwise 'px'
@@ -143,6 +146,9 @@ var modelStream =
 			{              scaleX: 1, scaleY: 1,                       }
 		))
 ```
+
+* Note: When we don't specify an behavior, it will default to `main`.
+* Note: `scaleX` and `scaleY` are **added**, because the `default` behavior is `scaleX=1` and `scaleY=1`. Supermove will merge `default` and `main` behavior. For scale, this is done using simple addition.
 
 ### Render
 
