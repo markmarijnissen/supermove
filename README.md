@@ -92,11 +92,11 @@ An single element can merge multiple Layout Specifications. This is called a **b
 
 For example:
 
-	* `button`: Add a hover-animation
-	* `data`: Add the button text
-	* `layout`: Set x,y,width,height
-	* `router`: Control visibility depending on url.
-	* `default`: Default behavior (see above)
+* `button`: Add a hover-animation
+* `data`: Add the button text
+* `layout`: Set x,y,width,height
+* `router`: Control visibility depending on url.
+* `default`: Default behavior (see above)
 
 You can define a behavior using the `behavior` attribute in the `layout-specification`. When rendering, all different behaviors are merged into a single spec. See [combine.js](src/core/combine.js).
 
