@@ -107,7 +107,7 @@
 	Supermove.animate = __webpack_require__(4);
 	Supermove.resize = __webpack_require__(5);
 	Supermove.tween = __webpack_require__(6);
-	Supermove.VERSION = ("0.2.0");
+	Supermove.VERSION = ("0.2.1");
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -117,7 +117,7 @@
 	}
 
 	if(true){
-		console.log('Supermove '+("0.2.0")+' (developer build)');
+		console.log('Supermove '+("0.2.1")+' (developer build)');
 	}
 	module.exports = Supermove;
 
