@@ -59,20 +59,20 @@ to deal with containers/groups, I expect the API to be more stable.
 The idea is simple: A user interface transforms input streams to layout specifications.
 
 ```javascript
-		// 1. Input Stream
-	move.event('click','#submit')
-		// 2. Transform to layout
-		.map(function(){
-			return {
-				id: 'submit',
-				content: 'clicked submit!'
-			}
-		})
-		// 3. Render
-		.onValue(move.render);
+// 1. Input Stream
+move.event('click','#submit')
+// 2. Transform to layout
+.map(function(){
+	return {
+		id: 'submit',
+		content: 'clicked submit!'
+	}
+})
+// 3. Render
+.onValue(move.render);
 ```
 
-**Input**
+### Input
 
 This can be anything:
 	* A DOM event using `move.event(....)` 
@@ -80,7 +80,7 @@ This can be anything:
 	* Position, size, etc from other elements.
 	* Other data sources, such as data from your business logic or an AJAX call.
 
-**Layout**
+## Layout
 
 A layout has multiple elements. Each element is positioned using a **one or more** `layout-specification`:
 
@@ -131,7 +131,7 @@ Create a Supermove to an element
 var move = new Supermove(document.body);
 ```
 
-### Input 
+#### Input 
 
 DOM Event
 ```javascript
@@ -154,7 +154,7 @@ var childWidth = move.spec('parent').width * 0.5;
 // Note: move.spec() is NOT a stream, unlike the others!
 ```
 
-### Transform
+#### Transform
 
 Transform intent to layout-specification:
 ```javascript
@@ -170,7 +170,7 @@ var modelStream =
 * Note: When we don't specify an behavior, it will default to `main`.
 * Note: `scaleX` and `scaleY` are **added**, because the `default` behavior is `scaleX=1` and `scaleY=1`. Supermove will merge `default` and `main` behavior. For scale, this is done using simple addition.
 
-### Render
+#### Render
 
 Subscribe to a stream with `move.render`
 ```javascript
@@ -179,7 +179,7 @@ modelStream.onValue(move.render)
 
 Hint: Not updating? Call `m.redraw()`!
 
-### Tricks
+#### Tricks
 
 * For `width` and `height`, `[0..1]` is rendered as percentage `%`, the rest as `px`.
 * Use `move.spec(id)` for relative size and positioning (alignment)
