@@ -1,5 +1,7 @@
 var Surface = require('./SurfaceComponent');
+var merge = require('./merge');
 var m = require('mithril');
+var getObjectValues = require('./getObjectValues');
 
 /**
  * Convert Surface ID to an index in the Container.

@@ -1,18 +1,12 @@
 var mat4 = require('./mat4');
 var merge = require('./merge');
+var getObjectValues = require('./getObjectValues');
 
 // for width and height
 // we assume [0...1] are percentages
 // while all other value are pixels
 function getNumValue(val){		
 	return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-}
-
-// object to array (to work with merge)
-function getObjectValues(obj){
-	return Object.keys(obj).map(function(key){
-		return obj[key];
-	});
 }
 
 /**

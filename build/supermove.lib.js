@@ -54,7 +54,7 @@
 	Supermove.animate = __webpack_require__(4);
 	Supermove.resize = __webpack_require__(5);
 	Supermove.tween = __webpack_require__(6);
-	Supermove.VERSION = ("0.2.2");
+	Supermove.VERSION = ("0.3.0");
 
 	// Export to Window
 	if(typeof window !== 'undefined'){
@@ -64,7 +64,7 @@
 	}
 
 	if(true){
-		console.log('Supermove '+("0.2.2")+' (developer build)');
+		console.log('Supermove '+("0.3.0")+' (developer build)');
 	}
 	module.exports = Supermove;
 
@@ -4633,7 +4633,9 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var Surface = __webpack_require__(16);
+	var merge = __webpack_require__(3);
 	var m = __webpack_require__(1);
+	var getObjectValues = __webpack_require__(17);
 
 	/**
 	 * Convert Surface ID to an index in the Container.
@@ -4710,7 +4712,7 @@
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DomDelegate = __webpack_require__(17).Delegate;
+	var DomDelegate = __webpack_require__(18).Delegate;
 	var Kefir = __webpack_require__(10);
 
 	/**
@@ -5000,21 +5002,15 @@
 /* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var mat4 = __webpack_require__(18);
+	var mat4 = __webpack_require__(19);
 	var merge = __webpack_require__(3);
+	var getObjectValues = __webpack_require__(17);
 
 	// for width and height
 	// we assume [0...1] are percentages
 	// while all other value are pixels
 	function getNumValue(val){		
 		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-	}
-
-	// object to array (to work with merge)
-	function getObjectValues(obj){
-		return Object.keys(obj).map(function(key){
-			return obj[key];
-		});
 	}
 
 	/**
@@ -5149,6 +5145,17 @@
 /* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
+	// object to array (to work with merge)
+	module.exports = function getObjectValues(obj){
+		return Object.keys(obj).map(function(key){
+			return obj[key];
+		});
+	};
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/*jshint browser:true, node:true*/
 
 	'use strict';
@@ -5161,7 +5168,7 @@
 	 * @copyright The Financial Times Limited [All Rights Reserved]
 	 * @license MIT License (see LICENSE.txt)
 	 */
-	var Delegate = __webpack_require__(19);
+	var Delegate = __webpack_require__(20);
 
 	module.exports = function(root) {
 	  return new Delegate(root);
@@ -5171,7 +5178,7 @@
 
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -5183,7 +5190,7 @@
 	window.GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
 
 	// Import the actual library
-	var mat4 = __webpack_require__(20).mat4;
+	var mat4 = __webpack_require__(21).mat4;
 
 	// Add method for style output (copied on mat4.str)
 	mat4.style = function (a) {
@@ -5196,7 +5203,7 @@
 	module.exports = mat4;
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*jshint browser:true, node:true*/
@@ -5631,7 +5638,7 @@
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.

@@ -1,10 +1,10 @@
 {
   "name": "supermove",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Functional Reactive Virtual Dom Layout Engine",
   "main": "./supermove.js",
   "scripts": {
-    "prepublish": "webpack && webpack --lib",
+    "prepublish": "webpack && webpack -l",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

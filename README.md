@@ -177,6 +177,13 @@ Hint: Not updating? Call `m.redraw()`!
 
 ## Changelog
 
+### 0.3.0 (11/04/2014)
+
+* Refactored code, moved and renamed files, wrote more documentation
+* Changed build proces:
+	* building two versions: with and without libs (Kefir and Mithril)
+	* not building the minified versions anymore
+
 ### 0.2.0 (11/04/2014)
 
 * Implemented behaviors

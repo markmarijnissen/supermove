@@ -13,7 +13,7 @@ if(argv.lib) {
 } else {
   alias = {
     'mithril':__dirname + '/lib/external-mithril',
-    'kefir':__dirname+ '/lib/external-kefir'
+    'kefir':__dirname + '/lib/external-kefir'
   };
 }
 
@@ -34,7 +34,7 @@ var config = {
             SUPERMOVE_DEVELOPMENT: !argv.minify,
             VERSION: JSON.stringify(require('./package.json').version)
         }),
-        new webpack.optimize.CommonsChunkPlugin("supermove",filename('supermove'))
+        //new webpack.optimize.CommonsChunkPlugin("supermove",filename('supermove'))
     ],
     module: {
         loaders: [
@@ -55,10 +55,6 @@ if(argv.minify){
       comments: false
     }
   }));
-}
-
-if(argv.lib){
-  config.entry = {'supermove':config.entry.supermove};
 }
 
 function filename(name){
