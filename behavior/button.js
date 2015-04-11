@@ -1,5 +1,8 @@
 (function(){
   var Kefir,Supermove;
+  /**
+   * For now, support both browser and CommonJS
+   */
   if(typeof module !== 'undefined') {
     Kefir = require('kefir');
     Supermove = require('../supermove');
@@ -7,6 +10,7 @@
   } else {
     Kefir = window.Kefir;
     Supermove = window.Supermove;
+    Supermove.button = Button;
   }
 
   function toFalse(){
@@ -76,6 +80,4 @@
     // immediatly render button
     .onValue(move.render);
   }
-
-  Supermove.button = Button;
 })();
