@@ -1,4 +1,4 @@
-var move = new Supermove(document.body,10);
+var move = new Supermove(document.body,{cache: 10});
 
 var animator = Kefir.emitter();
 var animation = animator.flatMapLatest(function(duration){
@@ -48,8 +48,8 @@ Button(move,4).onValue(move.render);
 var click1 = move.event('click','#1')
 	.map(function(){
 		return Supermove.tween(
-			{id:1,rotateY: move.element(1).rotateY, behavior:'onclick'},
-			{id:1,rotateY: move.element(1).rotateY + Math.PI * 0.25 }
+			{id:1,rotateY: move.spec(1).rotateY, behavior:'onclick'},
+			{     rotateY: move.spec(1).rotateY + Math.PI * 0.25 }
 		);
 	})
 	.flatMapLatest(function(tween){
@@ -72,8 +72,8 @@ var click2 = move.event('click','#2')
 var click3 = move.event('click','#3')
 	.map(function(){
 		return Supermove.tween(
-			{id:3,rotateY: move.element(3).rotateY, behavior:'onclick'},
-			{id:3,rotateY: move.element(1).rotateY}
+			{id:3,rotateY: move.spec(3).rotateY, behavior:'onclick'},
+			{id:3,rotateY: move.spec(1).rotateY}
 		);
 	})
 	.flatMapLatest(function(tween){
