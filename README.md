@@ -60,7 +60,7 @@ Transform input (user input, time, model-data) to a layout-specification.
 	* map to `layout-specification` data
 3. Render: Subscribe to Layout-Specification stream.
 
-#### The layout specification:
+### The layout specification:
 ```javascript
 var spec = {
 		id: 'submit',			// required unique ID for element
@@ -86,7 +86,7 @@ var spec = {
 ```
 Everything is optional, except for the `id` to specify the target element.
 
-#### Behaviors
+### Behaviors
 
 An single element can merge multiple Layout Specifications. This is called a **behavior**.
 
@@ -156,3 +156,30 @@ Hint: Not updating? Call `m.redraw()`!
 * For `width` and `height`, `[0..1]` is rendered as percentage `%`, the rest as `px`.
 * Use `move.spec(id)` for relative size and positioning (alignment)
 
+## Changelog
+
+### 0.2.0 (11/04/2014)
+
+* Implemented behaviors
+* Lots of changes
+
+### 0.1.0 (04/04/2014)
+
+* First release
+
+## Contribute
+
+Convert CommonJS to a browser-version:
+```bash
+npm install webpack -g
+npm run prepublish
+```
+
+Feel free to contribute to this project in any way. The easiest way to support this project is by giving it a star.
+
+## Contact
+-   @markmarijnissen
+-   http://www.madebymark.nl
+-   info@madebymark.nl
+
+© 2015 - Mark Marijnissen
