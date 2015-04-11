@@ -65,6 +65,7 @@ move.event('click','#submit')
 ### Input
 
 This can be anything:
+
 	* A DOM event using `move.event(....)` 
 	* A time value using `Supermove.animate(500)`
 	* Position, size, etc from other elements.
