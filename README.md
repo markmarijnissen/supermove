@@ -131,7 +131,7 @@ var childWidth = move.spec('parent').width * 0.5;
 // Note: move.spec() is NOT a stream, unlike the others!
 ```
 
-### Model:
+### Model / Transform
 
 Transform intent to layout-specification:
 ```javascript
@@ -144,7 +144,7 @@ var modelStream =
 		))
 ```
 
-### Views
+### Render
 
 Simply subscribe to a stream with `move.render`
 ```javascript
