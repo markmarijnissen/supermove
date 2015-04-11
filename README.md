@@ -4,19 +4,9 @@ Supermove
 
 ## Experimental work in progress !!
 
-The public API is changing a LOT as I find a way to work with components/widgets/modifiers
-that makes sense.
-
 ## TODO
 
-* Modifiers/Widgets/Components/Directives/Mixins/Behaviors **!!!!**
-	* How to map an element to a stream in such way you can have:
-		* A base specification
-		* then add modifiers / widgets / angular directives / mixins / behaviors
-	* How to apply a transformation/modifier on ALL elements (to facilitate occlusion culling)
-
 * Various improvements
-	* Remove gl-matrix dependency - extract only needed calculations (see snabbt.js?)
 	* Include easing functions.
 	* Set supermove-root (see famo.us?)
 	* Set perspective
@@ -53,60 +43,32 @@ and animating app layouts.
 	* Physics
 	* Couple animation to user interaction
 	* Link multiple elements and animations together
-* Reusable widgets / components
-	* Tab-bar, image carousel, buttons, etc
+* Reusable widgets / components / behaviors
 
 
 ## Idea
 
-Data flows unidirectionally: 
+Transform input (user input, time, model-data) to a layout-specification.
 
-1. Intents = Create Input Streams
-	* From DOM events using `move.stream(....)` 
+1. Input
+	* From DOM events using `move.event(....)` 
+	* From TIME using `Supermove.animate(500)`
 	* From other data sources, such as an AJAX call.
-2. Models = Transform Input Stream to an Layout-Specification stream.
+2. Model: Transform input to one or more Layout-Specification events.
 	* Merge inputs: `Kefir.combine([a,b,c], function(a,b,c) { .... })`
 	* map, filter, reduce, etc
 	* map to `layout-specification` data
-3. View = Subscribe to Layout-Specification stream.
+3. Render: Subscribe to Layout-Specification stream.
 
-## Usage
-
-Create a Supermove to an element
+#### The layout specification:
 ```javascript
-var move = new Supermove(document.body);
-```
-
-
-### Intent / Input
-Create Intent (Stream of DOM Events)
-```javascript
-var submitIntent = move.stream('click','#submit')
-```
-
-### Models
-
-Create Models (Transform Intent to Layout-Speficiation)
-```javascript
-var modelStream = 
-	submitIntent
-		.map(function(event){
-			return {
-				id: 'message',
-				content: event.target.value
-			}
-		});
-```
-
-The stream should deliver a Layout-Specification:
-```javascript
-var specs = [
-	{
+var spec = {
 		id: 'submit',			// required unique ID for element
+		behavior: '...'			// name for the behavior
 		element: '.text.class'  // mithril' virtual DOM element for wrapper surface.
 		show: false,	
-		width: 0,		
-		height: 0,
+		width: 0,				// For [0..1] unit is '%', otherwise 'px'
+		height: 0,				// For [0..1] unit is '%', otherwise 'px'
 		rotateX: 0,
 		rotateY: 0,
 		rotateZ: 0,
@@ -120,70 +82,77 @@ var specs = [
 		scaleZ: 1,
 		opacity: 1,
 		content: m('div','Hello World')	// mithril' Virtual DOM
-	},{
-		...
-	},
-	...
-]
+	}
+```
+Everything is optional, except for the `id` to specify the target element.
+
+#### Behaviors
+
+An single element can merge multiple Layout Specifications. This is called a **behavior**.
+
+For example:
+	* `button`: Add a hover-animation
+	* `data`: Add the button text
+	* `layout`: Set x,y,width,height
+	* `router`: Control visibility depending on url.
+	* `default`: Default behavior (see above)
+
+You can define a behavior using the `behavior` attribute in the `layout-specification`. When rendering, all different behaviors are merged into a single spec. See [combine.js](src/core/combine.js).
+
+You can also use `Supermove.combine` to manually merge multipe specs into one. See the [button.js](src/behaviors/button.js) component.
+
+## Usage
+Create a Supermove to an element
+```javascript
+var move = new Supermove(document.body);
 ```
 
-Hint: To update multiple elements, emit an array of layout-specification events and then call `flatten()`.
+### Input 
+
+DOM Event
+```javascript
+var submitIntent = move.stream('click','#submit')
+```
+
+Time
+```javascript
+var animation = Supermove.animate(500);
+```
+
+Window size:
+```javascript
+Supermove.resize
+```
+
+Layout Specification from another element:
+```
+var childWidth = move.spec('parent').width * 0.5;
+```
+
+### Model:
+
+Transform intent to layout-specification:
+```javascript
+var modelStream = 
+	submitIntent
+		.flatMapLatest(Supermove.animate(500))
+		.map(Supermove.tween(
+			{id:'message', scaleX: 0, scaleY: 0, content: 'Hello World'},
+			{              scaleX: 1, scaleY: 1,                       }
+		))
+```
 
 ### Views
 
-**IS CHANGING**
-
-Simply subscribe a supermove instance to a Layout-Specification stream to update view:
+Simply subscribe to a stream with `move.render`
 ```javascript
-// Draw element with `id` using the `stream` with Layout-Specification
-move.subscribe(id,stream);
-move.unsubscribe(id,stream);
+modelStream.onValue(move.render)
 ```
 
 Hint: Not updating? Call `m.redraw()`!
 
-Hint: For cool particle systems, use `move.inc` to let every particle exert a force on the element.
+### Tricks
 
-### Helpers
-
-```javascript
-// Stream based on requestAnimationFrame
-Supermove.animate(500); // return Stream. 0 = forever
-	.onValue(function(time){
-		// time from [0...1] (with duration)
-		// time in seconds (without duration)
-	})
-
-// Stream with window size:
-Supermove.resize;
-
-// Tween between two specs
-Supermove.tween(startSpec,endSpec,t); // return tweened spec at time t.
-Supermove.tween(startSpec,endSpec) // return function(time) {... }
-
-// Combine Animation with Tween like this:
-Supermove
-	.animate(500)
-	.map(Supermove.tween(start,end)) // Stream with tweening spec
-
-// Get Layout-Specification (for relative positioning and sizing)
-var spec = move.element('parent') // returns Layout-Specification
-
-```
-
-## What does Supermove do?
-
-Supermove uses Kefir, Mithril and dom-delegate.
-
-What does Supermove add?
-
-* Layout-Specification: It wraps the Virtual DOM in a Layout-Specification
-	* The Layout-Specification make it easy to do layout with a CSS3 matrix3d transformation
-* View are stream subscribers.
-* Cache DOM nodes: Supermove manages a Mihril view for you.
-* DOM Event Streams: Supermove adds DOM Event Delegation to Mithril and converts events into a Kefir Stream: `move.event(eventType,selector)`
-* Animation Stream: `Supermove.animate(duration)`
-* Window size Stream: `Supermove.resize`
-* Tween helper: `Supermove.tween(startSpec,endSpec)(time)`
-* Combine helper: Combine multiple specs into one.
+* For `width` and `height`, `[0..1]` is rendered as percentage `%`, the rest as `px`.
+* Use `move.spec(id)` for relative size and positioning (alignment)
 
