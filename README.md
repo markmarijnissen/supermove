@@ -2,22 +2,6 @@ Supermove
 ---------
 > A functional reactive virtual DOM layout engine, powered by Mithril and Kefir.
 
-## The Vision
-
-A superfast, easy-to-use library for creating complex animated user interfaces.
-
-* Friendly developer API
-* Targets mobile devices (iOS/Android apps with Cordova)
-* Fast and efficient
-* Easy and powerful animations
-	* Tweening
-	* Physics
-	* Couple animation to user interaction
-	* Link multiple elements and animations together
-* Reusable widgets / components / behaviors
-
----
-
 ## Experimental work in progress
 
 The public API is currently in heavy flux. After working out how 
@@ -44,15 +28,21 @@ to deal with containers/groups, I expect the API to be more stable.
 	* [bug] DOM Cache - does not check for element tag type.
 	* Transduce something.
 
-### DONE
-
-* Surface: A Mithril component that transforms a LayoutSpec to a matrix3d transform.
-* DOM Cache Container: A Mithril component
-* Mithril + Kefir - Render by subscribing to a stream.
-* DOM Event Streams - Use `dom-delegate` to create input streams.
-* Behaviors - compose a single element out of multiple behaviors (e.g. mixins, directives, components)
-
 ---
+
+## The Vision
+
+A superfast, easy-to-use library for creating complex animated user interfaces.
+
+* Friendly developer API
+* Targets mobile devices (iOS/Android apps with Cordova)
+* Fast and efficient
+* Easy and powerful animations
+	* Tweening
+	* Physics
+	* Couple animation to user interaction
+	* Link multiple elements and animations together
+* Reusable widgets / components / behaviors
 
 ## The Idea: Transform input to layout
 
