@@ -39,22 +39,20 @@ var buttons = Kefir.combine([mouseX,animation],function(mouseX,animation){
 	.flatten()
 	.onValue(move.render);
 
-Supermove.button(move,1).onValue(move.render);
-Supermove.button(move,2).onValue(move.render);
-Supermove.button(move,3).onValue(move.render);
-Supermove.button(move,4).onValue(move.render);
+Supermove.button(move,1);
+Supermove.button(move,2);
+Supermove.button(move,3);
+Supermove.button(move,4);
 
 // rotation incremental
 var click1 = move.event('click','#1')
 	.map(function(){
-		console.log(move.spec(1).rotateY,move.spec(1).rotateY + Math.PI * 0.25)
 		return Supermove.tween(
 			{id:1,rotateY: move.spec(1).rotateY, behavior:'onclick'},
 			{     rotateY: move.spec(1).rotateY + Math.PI * 0.25 }
 		);
 	})
 	.flatMapLatest(function(tween){
-		console.log(tween(1));
 		return Supermove.animate(500).map(tween);
 	})
 	.onValue(move.render);

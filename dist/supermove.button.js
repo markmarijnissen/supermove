@@ -48,7 +48,13 @@ webpackJsonp([0],[
 	        { scaleX: 0.5, scaleY: 0.5 }
 	    ));
 
-	  return Kefir.combine([Kefir.constant({id:id,behavior:'button'}),scaleSpec,hoverSpec,selectedSpec],Supermove.combine);
+	  Kefir.combine([
+	    Kefir.constant({id:id,behavior:'button'}),
+	    scaleSpec,
+	    hoverSpec,
+	    selectedSpec
+	  ],Supermove.combine)
+	    .onValue(move.render);
 	}
 
 	Supermove.button = Button;
