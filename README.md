@@ -66,10 +66,10 @@ move.event('click','#submit')
 
 This can be anything:
 
-	* A DOM event using `move.event(....)` 
-	* A time value using `Supermove.animate(500)`
-	* Position, size, etc from other elements.
-	* Other data sources, such as data from your business logic or an AJAX call.
+* A DOM event using `move.event(....)` 
+* A time value using `Supermove.animate(500)`
+* Position, size, etc from other elements.
+* Other data sources, such as data from your business logic or an AJAX call.
 
 ## Layout
 
