@@ -93,6 +93,7 @@ function SurfaceController(options){
 		'default':{
 			id: options.id,
 			show: options.show,
+			parent: options.parent,
 			element: options.element || '.supermove-surface',
 			width: options.width || 0,
 			height: options.height || 0,
@@ -181,12 +182,6 @@ SurfaceController.prototype.update = function SurfaceUpdate(spec){
 
 /**
  * Mithril View to render a Surface
- *
- * Needs:
- * 	ctrl.id -- element ID and Mithril key (optional)
- * 	ctrl.element -- element string
- * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
- * 	ctrl.content -- virtual dom content.
  */
 function SurfaceView(ctrl){
 	var content = (ctrl.spec.content || []).concat(SURFACES.filter(function(surface){
