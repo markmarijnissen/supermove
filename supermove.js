@@ -1,5 +1,6 @@
 require('./supermove.css');
 require('polyfill-function-prototype-bind');
+var Surface = require('./core/Surface');
 var Kefir = require('kefir');
 var m = require('mithril');
 
@@ -8,6 +9,9 @@ Supermove.merge = require('./core/merge');
 Supermove.animate = require('./input/animate');
 Supermove.resize = require('./input/resize');
 Supermove.tween = require('./transform/tween');
+Supermove.update = Surface.update;
+Supermove.spec = Surface.spec;
+Supermove.event = require('./core/DomEventStreamFactory')(document.body);
 Supermove.VERSION = VERSION;
 
 // Export to Window

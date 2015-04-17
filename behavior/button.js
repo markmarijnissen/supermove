@@ -21,7 +21,7 @@
         });
   }
 
-  function Button(move,id){
+  function Button(id){
     var idStr = '#'+id;
     var selected = true;
 
@@ -33,7 +33,7 @@
 
     // Click spec: clicks --> toggle .selected class
     var selectedSpec = Kefir.constant(false)
-      .merge(move.event('click',idStr))
+      .merge(Supermove.event('click',idStr))
       .map(function(){
         selected = !selected;
         return selected? { element:'.selected', content:' (ON)'}:{content:' (OFF)'};
@@ -41,8 +41,8 @@
 
     // hover -->
     var hoverStream = Kefir.constant(false)
-      .merge(move.event('mouseover',idStr).map(toTrue))
-      .merge(move.event('mouseout',idStr).map(toFalse));
+      .merge(Supermove.event('mouseover',idStr).map(toTrue))
+      .merge(Supermove.event('mouseout',idStr).map(toFalse));
 
     // Hover Class spec: 
     // hover --> toggle .hover class
@@ -70,7 +70,7 @@
     // log (debug)
     //.log('button '+id)
     // immediatly render button
-    .onValue(move.render);
+    .onValue(Supermove.update);
   }
 
   Supermove.button = Button;

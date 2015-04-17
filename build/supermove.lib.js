@@ -44,16 +44,20 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(7);
 	__webpack_require__(9);
-	var Kefir = __webpack_require__(10);
-	var m = __webpack_require__(1);
+	__webpack_require__(11);
+	var Surface = __webpack_require__(22);
+	var Kefir = __webpack_require__(12);
+	var m = __webpack_require__(2);
 
-	var Supermove = __webpack_require__(2);
-	Supermove.merge = __webpack_require__(3);
-	Supermove.animate = __webpack_require__(4);
-	Supermove.resize = __webpack_require__(5);
-	Supermove.tween = __webpack_require__(6);
+	var Supermove = __webpack_require__(4);
+	Supermove.merge = __webpack_require__(5);
+	Supermove.animate = __webpack_require__(6);
+	Supermove.resize = __webpack_require__(7);
+	Supermove.tween = __webpack_require__(8);
+	Supermove.update = Surface.update;
+	Supermove.spec = Surface.spec;
+	Supermove.event = __webpack_require__(1)(document.body);
 	Supermove.VERSION = ("0.3.0");
 
 	// Export to Window
@@ -70,6 +74,63 @@
 
 /***/ },
 /* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DomDelegate = __webpack_require__(18).Delegate;
+	var Kefir = __webpack_require__(12);
+
+	/**
+	 * createDomEventStreamFactory(element)
+	 *
+	 * Initialize a DomDelegate instance to create a
+	 * Stream Factory - it's actually a StreamFactory-Factory :)
+	 */
+	function createDomEventStreamFactory(el){
+		var delegate = new DomDelegate(el);
+		return DomEventStreamFactory.bind(delegate);
+	}
+
+	/**
+	 * Stream factory
+	 *
+	 * Create a stream of DOM Events
+	 */
+	function DomEventStreamFactory(eventType,handler,useCapture){
+		// `this` is bound to a dom-delegate instance.
+		// 
+		// We use function.bind() to get a partially applied
+		// 'subscribe' and 'unsubscribe' function.
+		// 
+		// The only argument remaining is the "callback" argument,
+		// which is exactly what Kefir needs.
+		return Kefir.fromSubUnsub(
+			subscribe.bind(this,eventType,handler,useCapture),
+			unsubscribe.bind(this,eventType,handler,useCapture)
+		);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function subscribe(eventType,handler,useCapture,callback){
+		this.on(eventType,handler,callback,useCapture);
+	}
+
+	/**
+	 * Subscribe to DOM-Events
+	 *
+	 * Note: `this` is bound to a dom-delegate instance
+	 */
+	function unsubscribe(eventType,handler,useCapture,callback){
+		this.off(eventType,handler,callback,useCapture);
+	}
+
+	module.exports = createDomEventStreamFactory;
+
+/***/ },
+/* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module) {var m = (function app(window, undefined) {
@@ -122,8 +183,6 @@
 					cell.attrs[pair[1]] = pair[3] || (pair[2] ? "" :true)
 				}
 			}
-			if (classes.length > 0) cell.attrs[classAttrName] = classes.join(" ");
-
 
 			var children = hasAttrs ? args.slice(2) : args.slice(1);
 			if (children.length === 1 && type.call(children[0]) === ARRAY) {
@@ -134,12 +193,16 @@
 			}
 			
 			for (var attrName in attrs) {
-				if (attrName === classAttrName) {
-					var className = cell.attrs[attrName]
-					cell.attrs[attrName] = (className && attrs[attrName] ? className + " " : className || "") + attrs[attrName];
+				if (attrs.hasOwnProperty(attrName)) {
+					if (attrName === classAttrName && attrs[attrName] != null && attrs[attrName] !== "") {
+						classes.push(attrs[attrName])
+						cell.attrs[attrName] = "" //create key in correct iteration order
+					}
+					else cell.attrs[attrName] = attrs[attrName]
 				}
-				else cell.attrs[attrName] = attrs[attrName]
 			}
+			if (classes.length > 0) cell.attrs[classAttrName] = classes.join(" ");
+			
 			return cell
 		}
 		function build(parentElement, parentTag, parentCache, parentIndex, data, cached, shouldReattach, index, editable, namespace, configs) {
@@ -312,11 +375,11 @@
 			else if (data != null && dataType === OBJECT) {
 				var controllerConstructors = [], controllers = []
 				while (data.view) {
-					var controllerConstructor = data.controller.$original || data.controller
-					var controllerIndex = cached.controllerConstructors ? cached.controllerConstructors.indexOf(controllerConstructor) : -1
+					var controllerConstructor = (data.controller || {}).$original || data.controller || function() {}
+					var controllerIndex = m.redraw.strategy() == "diff" && cached.controllerConstructors ? cached.controllerConstructors.indexOf(controllerConstructor) : -1
 					var controller = controllerIndex > -1 ? cached.controllers[controllerIndex] : new (data.controller || function() {})
 					var key = data && data.attrs && data.attrs.key
-					data = pendingRequests == 0 ? data.view(controller) : {tag: "placeholder"}
+					data = pendingRequests == 0 || cached ? data.view(controller) : {tag: "placeholder"}
 					if (key) {
 						if (!data.attrs) data.attrs = {}
 						data.attrs.key = key
@@ -332,7 +395,7 @@
 				var dataAttrKeys = Object.keys(data.attrs)
 				var hasKeys = dataAttrKeys.length > ("key" in data.attrs ? 1 : 0)
 				//if an element is different enough from the one in cache, recreate it
-				if (data.tag != cached.tag || dataAttrKeys.join() != Object.keys(cached.attrs).join() || data.attrs.id != cached.attrs.id || data.attrs.key != cached.attrs.key || (m.redraw.strategy() == "all" && cached.configContext && cached.configContext.retain !== true) || (m.redraw.strategy() == "diff" && cached.configContext && cached.configContext.retain === false)) {
+				if (data.tag != cached.tag || dataAttrKeys.sort().join() != Object.keys(cached.attrs).sort().join() || data.attrs.id != cached.attrs.id || data.attrs.key != cached.attrs.key || (m.redraw.strategy() == "all" && cached.configContext && cached.configContext.retain !== true) || (m.redraw.strategy() == "diff" && cached.configContext && cached.configContext.retain === false)) {
 					if (cached.nodes.length) clear(cached.nodes);
 					if (cached.configContext && typeof cached.configContext.onunload === FUNCTION) cached.configContext.onunload()
 					if (cached.controllers) {
@@ -391,7 +454,7 @@
 				}
 				//schedule configs to be called. They are called after `build` finishes running
 				if (typeof data.attrs["config"] === FUNCTION) {
-					var context = cached.configContext = cached.configContext || {retain: (m.redraw.strategy() == "diff") || undefined};
+					var context = cached.configContext = cached.configContext || {};
 
 					// bind
 					var callback = function(data, args) {
@@ -617,28 +680,24 @@
 			return gettersetter(store)
 		};
 
-		var roots = [], modules = [], controllers = [], lastRedrawId = null, lastRedrawCallTime = 0, computePostRedrawHook = null, prevented = false, topModule, unloaders = [];
+		var roots = [], components = [], controllers = [], lastRedrawId = null, lastRedrawCallTime = 0, computePostRedrawHook = null, prevented = false, topComponent, unloaders = [];
 		var FRAME_BUDGET = 16; //60 frames per second = 1 call per 16 ms
-		function submodule(module, args) {
-			var controller = function() {
-				return (module.controller || function() {}).apply(this, args) || this
-			}
+		function parameterize(component, args) {
+			var controller = component.controller || function(){};
+			contoller = controller.bind.apply(controller,[controller].concat(args));
 			var view = function(ctrl) {
 				if (arguments.length > 1) args = args.concat([].slice.call(arguments, 1))
-				return module.view.apply(module, args ? [ctrl].concat(args) : [ctrl])
+				return component.view.apply(component, args ? [ctrl].concat(args) : [ctrl])
 			}
-			controller.$original = module.controller
+			controller.$original = component.controller
 			var output = {controller: controller, view: view}
 			if (args[0] && args[0].key != null) output.attrs = {key: args[0].key}
 			return output
 		}
-		m.component = function(module) {
-			return function() {
-				return submodule(module, [].slice.call(arguments))
-			}
+		m.component = function(component) {
+			return parameterize(component, [].slice.call(arguments, 1))
 		}
-		//m.module is deprecated, use m.mount
-		m.mount = m.module = function(root, module) {
+		m.mount = m.module = function(root, component) {
 			if (!root) throw new Error("Please ensure the DOM element exists before rendering a template into it.");
 			var index = roots.indexOf(root);
 			if (index < 0) index = roots.length;
@@ -646,7 +705,7 @@
 			var isPrevented = false;
 			var event = {preventDefault: function() {isPrevented = true}};
 			for (var i = 0, unloader; unloader = unloaders[i]; i++) {
-				unloader.handler(event)
+				unloader.handler.call(unloader.controller, event)
 				unloader.controller.onunload = null
 			}
 			if (isPrevented) {
@@ -662,18 +721,20 @@
 				m.redraw.strategy("all");
 				m.startComputation();
 				roots[index] = root;
-				var currentModule = topModule = module = module || {};
-				var constructor = module.controller || function() {}
+				if (arguments.length > 2) component = subcomponent(component, [].slice.call(arguments, 2))
+				var currentComponent = topComponent = component = component || {};
+				var constructor = component.controller || function() {}
 				var controller = new constructor;
-				//controllers may call m.module recursively (via m.route redirects, for example)
-				//this conditional ensures only the last recursive m.module call is applied
-				if (currentModule === topModule) {
+				//controllers may call m.mount recursively (via m.route redirects, for example)
+				//this conditional ensures only the last recursive m.mount call is applied
+				if (currentComponent === topComponent) {
 					controllers[index] = controller;
-					modules[index] = module
+					components[index] = component
 				}
 				endFirstComputation();
 				return controllers[index]
 			}
+			else computePostRedrawHook = null
 		};
 		var redrawing = false
 		m.redraw = function(force) {
@@ -684,7 +745,7 @@
 			if (lastRedrawId && force !== true) {
 				//when setTimeout: only reschedule redraw if time between now and previous redraw is bigger than a frame, otherwise keep currently scheduled timeout
 				//when rAF: always reschedule redraw
-				if ($requestAnimationFrame === window.requestAnimationFrame || new Date - lastRedrawCallTime > FRAME_BUDGET) {
+				if (new Date - lastRedrawCallTime > FRAME_BUDGET || $requestAnimationFrame === window.requestAnimationFrame) {
 					if (lastRedrawId > 0) $cancelAnimationFrame(lastRedrawId);
 					lastRedrawId = $requestAnimationFrame(redraw, FRAME_BUDGET)
 				}
@@ -700,8 +761,8 @@
 		function redraw() {
 			for (var i = 0, root; root = roots[i]; i++) {
 				if (controllers[i]) {
-					var args = modules[i].controller && modules[i].controller.$$args ? [controllers[i]].concat(modules[i].controller.$$args) : [controllers[i]]
-					m.render(root, modules[i].view ? modules[i].view(controllers[i], args) : blank())
+					var args = components[i].controller && components[i].controller.$$args ? [controllers[i]].concat(components[i].controller.$$args) : [controllers[i]]
+					m.render(root, components[i].view ? components[i].view(controllers[i], args) : blank())
 				}
 			}
 			//after rendering within a routed context, we need to scroll back to the top, and fetch the document title for history.pushState
@@ -826,13 +887,13 @@
 			var keys = Object.keys(router);
 			var index = keys.indexOf(path);
 			if(index !== -1){
-				m.module(root, router[keys [index]]);
+				m.mount(root, router[keys [index]]);
 				return true;
 			}
 
 			for (var route in router) {
 				if (route === path) {
-					m.module(root, router[route]);
+					m.mount(root, router[route]);
 					return true
 				}
 
@@ -843,7 +904,7 @@
 						var keys = route.match(/:[^\/]+/g) || [];
 						var values = [].slice.call(arguments, 1, -2);
 						for (var i = 0, len = keys.length; i < len; i++) routeParams[keys[i].replace(/:|\./g, "")] = decodeURIComponent(values[i])
-						m.module(root, router[route])
+						m.mount(root, router[route])
 					});
 					return true
 				}
@@ -886,6 +947,8 @@
 			return str.join("&")
 		}
 		function parseQueryString(str) {
+			if (str.charAt(0) === "?") str = str.substring(1);
+			
 			var pairs = str.split("&"), params = {};
 			for (var i = 0, len = pairs.length; i < len; i++) {
 				var pair = pairs[i].split("=");
@@ -1177,6 +1240,7 @@
 			var extract = xhrOptions.extract || function(xhr) {
 				return xhr.responseText.length === 0 && deserialize === JSON.parse ? null : xhr.responseText
 			};
+			xhrOptions.method = (xhrOptions.method || 'GET').toUpperCase();
 			xhrOptions.url = parameterizeUrl(xhrOptions.url, xhrOptions.data);
 			xhrOptions = bindData(xhrOptions, xhrOptions.data, serialize);
 			xhrOptions.onload = xhrOptions.onerror = function(e) {
@@ -1217,38 +1281,33 @@
 	if (typeof module != "undefined" && module !== null && module.exports) module.exports = m;
 	else if (true) !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {return m}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(16)(module)))
 
 /***/ },
-/* 2 */
+/* 3 */,
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ContainerComponent = __webpack_require__(11);
-	var DomEventStreamFactory = __webpack_require__(12);
+	var Surface = __webpack_require__(22);
+	var DomEventStreamFactory = __webpack_require__(1);
 
 	/**
 	 * Create a Supermove instance
-	 *
-	 * - Initialize a dom-delegate (to create DOM Event Streams)
-	 * - Mount a Mithril "ContainerComponent"
 	 */
 	module.exports = function Supermove(el,options){
-		var api = {
-			event: DomEventStreamFactory(el)
-			// render -- added by ContainerComponent
-			// spec -- added by ContainerComponent
-		};
-		m.mount(el,ContainerComponent(api,options));
-
-		// Magic Javascript Trick - 
-		// you can explicitly return an instance
-		// when using `new Supermove()`
-		return api;
+		return m.mount(el,{
+			controller: Surface.controller.bind(Surface.controller,{
+				id: 'root',
+				parent:'root-container',
+				show: true
+			}),
+			view: Surface.view
+		});
 	};
 
 
 /***/ },
-/* 3 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -1283,6 +1342,13 @@
 						}
 						dest[key] = srcVal;
 						break;
+					// 'parent' should be the same, otherwise error
+					case 'parent':
+						if(destType !== 'undefined' && destVal !== srcVal){
+							throw new Error('merging specs with different parents! ('+destVal+' != '+srcVal+')');
+						}
+						dest[key] = srcVal;
+						break;
 					// 'element' is added once (i.e. add class only once)
 					case 'element':
 						if(!destVal || destVal.indexOf(srcVal) < 0){
@@ -1311,6 +1377,17 @@
 						}
 						break;
 
+					case 'content':
+						if(destType === 'undefined'){
+							destVal = [];
+						} else if(!Array.isArray(destVal)){
+							destVal = [destVal];
+						}
+						if(!Array.isArray(srcVal)){
+							srcVal = [srcVal];
+						}
+						dest[key] = destVal.concat(srcVal);
+						break;
 					// for all other keys
 					default:
 						// + for numbers
@@ -1325,8 +1402,8 @@
 						} else if(srcType === 'boolean'){  
 							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
 						
-						// concat on arrays
-						} else if(Array.isArray(srcVal)){
+						// concat on arrays / other stuff
+						} else {
 							if(destType === 'undefined') {
 								destVal = [];
 							} else if(!Array.isArray(destVal)){
@@ -1342,11 +1419,11 @@
 	};
 
 /***/ },
-/* 4 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
-	var m = __webpack_require__(1);
+	var Kefir = __webpack_require__(12);
+	var m = __webpack_require__(2);
 	var callbacks = [];
 
 	function step(time){
@@ -1387,19 +1464,22 @@
 	};
 
 /***/ },
-/* 5 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Kefir = __webpack_require__(10);
+	var Kefir = __webpack_require__(12);
+
+	var SIZE = [window.innerWidth,window.innerHeight];
 
 	module.exports = Kefir.fromEvent(window,'resize')
 		.map(function(event){
 			return [event.target.innerWidth,event.target.innerHeight];
 		})
-		.toProperty([window.innerWidth,window.innerHeight]);
+		.merge(Kefir.constant(SIZE))
+		.toProperty(SIZE);
 
 /***/ },
-/* 6 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function tween(start,end,time){
@@ -1424,16 +1504,16 @@
 
 
 /***/ },
-/* 7 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(8);
+	var content = __webpack_require__(10);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(13)(content, {});
+	var update = __webpack_require__(15)(content, {});
 	// Hot Module Replacement
 	if(false) {
 		// When the styles change, update the <style> tags
@@ -1447,14 +1527,14 @@
 	}
 
 /***/ },
-/* 8 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(15)();
-	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
+	exports = module.exports = __webpack_require__(17)();
+	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    width: 100%;\n    height: 100%;\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
 
 /***/ },
-/* 9 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
@@ -1485,7 +1565,7 @@
 
 
 /***/ },
-/* 10 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! Kefir.js v1.3.1
@@ -4629,144 +4709,9 @@
 	}(this));
 
 /***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Surface = __webpack_require__(16);
-	var merge = __webpack_require__(3);
-	var m = __webpack_require__(1);
-	var getObjectValues = __webpack_require__(17);
-
-	/**
-	 * Convert Surface ID to an index in the Container.
-	 *
-	 * If Surface ID does not exist, it will fetch a
-	 * cached Surface. If there are no cached surfaces, 
-	 * it will create a new one.
-	 */
-	function ContainerIndex(id){
-		var index = this._idToIndex[id], surflen = this.surfaces.length;
-		if(typeof index === 'undefined') {
-			index = 0;
-			while(index < surflen && this.surfaces[index].show === true) index++;
-			if(index === surflen) {
-				this.surfaces.push(new SurfaceController());
-			} else {
-				var removedId = this.surfaces[index].id;
-				this._idToIndex[removedId] = undefined;
-			}
-			this._idToIndex[id] = index;
-		}
-		return index;
-	}
-
-	/**
-	 * Return merged spec of a Surface.
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerSpec(id){
-		var index = ContainerIndex.call(this,id);
-		return merge.apply(null,getObjectValues(this.surfaces[index].specs));
-	}
-
-	/**
-	 * Update specification of a Surface
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerUpdate(value){
-		var index = ContainerIndex.call(this,value.id);
-		this.surfaces[index].update(value);
-	}
-
-	/**
-	 * Mithril ContainerComponent
-	 *
-	 * A Virtual DOM Container to manage Surfaces.
-	 *
-	 * The ContainerComponent keeps a cache of DOM Nodes.
-	 * Every surface ID is mapped to an index in the DOM Cache.
-	 * If a Surface is invisible (i.e. show = false), it can
-	 * be reused by a new surface.
-	 *
-	 * Public API:
-	 *  .spec(id) --> return Surface spec for an ID
-	 *  .render(spec) --> update Surface spec
-	 */
-	module.exports = m.component({
-		controller: function ContainerController(api,options){
-			var n = options.cache || 20;
-			this.surfaces = new Array(n);
-			this._idToIndex = {};
-			for(var i = 0; i<n; i++){
-				this.surfaces[i] = new Surface.controller();
-			}
-			api.spec = ContainerSpec.bind(this);
-			api.render = ContainerUpdate.bind(this);
-		},
-		view: function ContainerView(ctrl){
-			return m('.supermove-container',ctrl.surfaces.map(Surface.view));
-		}
-	});
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var DomDelegate = __webpack_require__(18).Delegate;
-	var Kefir = __webpack_require__(10);
-
-	/**
-	 * createDomEventStreamFactory(element)
-	 *
-	 * Initialize a DomDelegate instance to create a
-	 * Stream Factory - it's actually a StreamFactory-Factory :)
-	 */
-	function createDomEventStreamFactory(el){
-		var delegate = new DomDelegate(el);
-		return DomEventStreamFactory.bind(delegate);
-	}
-
-	/**
-	 * Stream factory
-	 *
-	 * Create a stream of DOM Events
-	 */
-	function DomEventStreamFactory(eventType,handler,useCapture){
-		// `this` is bound to a dom-delegate instance.
-		// 
-		// We use function.bind() to get a partially applied
-		// 'subscribe' and 'unsubscribe' function.
-		// 
-		// The only argument remaining is the "callback" argument,
-		// which is exactly what Kefir needs.
-		return Kefir.fromSubUnsub(
-			subscribe.bind(this,eventType,handler,useCapture),
-			unsubscribe.bind(this,eventType,handler,useCapture)
-		);
-	}
-
-	/**
-	 * Subscribe to DOM-Events
-	 *
-	 * Note: `this` is bound to a dom-delegate instance
-	 */
-	function subscribe(eventType,handler,useCapture,callback){
-		this.on(eventType,handler,callback,useCapture);
-	}
-
-	/**
-	 * Subscribe to DOM-Events
-	 *
-	 * Note: `this` is bound to a dom-delegate instance
-	 */
-	function unsubscribe(eventType,handler,useCapture,callback){
-		this.off(eventType,handler,callback,useCapture);
-	}
-
-	module.exports = createDomEventStreamFactory;
-
-/***/ },
-/* 13 */
+/* 13 */,
+/* 14 */,
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -4962,7 +4907,7 @@
 
 
 /***/ },
-/* 14 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -4978,7 +4923,7 @@
 
 
 /***/ },
-/* 15 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function() {
@@ -4997,160 +4942,6 @@
 		};
 		return list;
 	}
-
-/***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var mat4 = __webpack_require__(19);
-	var merge = __webpack_require__(3);
-	var getObjectValues = __webpack_require__(17);
-
-	// for width and height
-	// we assume [0...1] are percentages
-	// while all other value are pixels
-	function getNumValue(val){		
-		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-	}
-
-	/**
-	 * Mithril SurfaceController
-	 *
-	 * Keeps state of a single element.
-	 *
-	 * input: 
-	 * 		this.specs: mapping from behavior => spec
-	 *
-	 * output:
-	 * 		id:    	 element id + Mithril key
-	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
-	 * 		element: Mithril Virtual DOM element string
-	 * 		content: Mithril Virtual DOM content
-	 *
-	 * A Surface listens to multiple specs.
-	 *
-	 * Every spec is called an "behavior".
-	 * All behaviors are merged into a single spec.
-	 * (See merge.js for how merging logic)
-	 *
-	 * public api:
-	 * 		.render(spec)
-	 */
-	function SurfaceController(){
-		this.matrix = mat4.create();
-		this.specs = {
-			'default':{
-				element: '.supermove-surface',
-				width: 0,
-				height: 0,
-				rotateX: 0,
-				rotateY: 0,
-				rotateZ: 0,
-				x: 0,
-				y: 0,
-				z: 0,
-				originX: 0.5,
-				originY: 0.5,
-				scaleX: 1,
-				scaleY: 1,
-				scaleZ: 1,
-				opacity: 1,
-				content: ''
-			}
-		};
-
-		this.show = false;
-		this.content = '';
-		this.element = '.supermove-surface';
-	}
-
-	SurfaceController.prototype.update = function SurfaceUpdate(spec){
-		this.specs[spec.behavior || 'main'] = spec;
-		this.calculateStyle();
-	};
-
-	SurfaceController.prototype.calculateStyle = function(){
-		// merge specs into final spec.
-		var spec = merge.apply(null,getObjectValues(this.specs));
-		
-		// update state
-		this.id = spec.id;				// Mithril View: key + id
-		this.show  = spec.show; 		// For Container (to check if it's free)
-		//this.style = .... 			// Mithril View: Style Attribute
-		this.element = spec.element;	// Mithril View: Virtual DOM element string
-		this.content = spec.content;	// Mithril View: Virtual DOM children / content
-
-		// display: none if invisible
-		if(spec.show !== true){
-			this.style = "display: none;";
-			return;
-		}
-
-		// otherwise: calculate style
-		if(spec.opacity >= 1) spec.opacity = 0.99999;
-		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
-		// opacity is very low, otherwise Chrome will not render
-		// which can unpredicted cause flickering / rendering lag
-		// 
-		// We're assuming you have good reason to draw the surface,
-		// even when it's not visible.
-		//  - i.e. fast access (at the cost of more memory)
-		// 
-		// If you want to cleanup the node, set `show` to false
-		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
-		this.style = "opacity: "+spec.opacity+"; ";
-
-		// matrix3d transform
-		var m = this.matrix;
-		mat4.identity(m);
-		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
-		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
-		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
-		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
-		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
-		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
-		
-		// matrix3d transform origin
-		this.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+'% 0px; ';
-		
-		// width and height
-		if(spec.width){
-			this.style += 'width: '+getNumValue(spec.width)+'; ';
-		}
-		if(spec.height){
-			this.style += 'height: '+getNumValue(spec.height)+'; ';
-		}
-	};
-
-	/**
-	 * Mithril View to render a Surface
-	 *
-	 * Needs:
-	 * 	ctrl.id -- element ID and Mithril key (optional)
-	 * 	ctrl.element -- element string
-	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
-	 * 	ctrl.content -- virtual dom content.
-	 */
-	function SurfaceView(ctrl){
-		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
-		return m(ctrl.element,attr,ctrl.content);
-	}
-
-	module.exports = {
-		controller: SurfaceController,
-		view: SurfaceView
-	};
-
-/***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// object to array (to work with merge)
-	module.exports = function getObjectValues(obj){
-		return Object.keys(obj).map(function(key){
-			return obj[key];
-		});
-	};
 
 /***/ },
 /* 18 */
@@ -6556,6 +6347,238 @@
 	    exports.mat4 = mat4;
 	}
 
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var mat4 = __webpack_require__(19);
+	var merge = __webpack_require__(5);
+	var m = __webpack_require__(2);
+
+	/**
+	 * Every surface has an unique ID
+	 * A parent is a special surface, also has an unique ID
+	 *
+	 * - When updating specs, we need to find Surface corresponding to ID.
+	 * - When rendering, we need to find IDs that belong to surface
+	 * 
+	 * @type {Object}
+	 */
+	var SURFACES = [];
+	var ID_TO_INDEX = {};
+
+	/**
+	 * Convert Surface ID to an index in the Container.
+	 *
+	 * If Surface ID does not exist, it will fetch a
+	 * cached Surface. If there are no cached surfaces, 
+	 * it will create a new one.
+	 */
+	function SurfaceIndex(id){
+		var index = ID_TO_INDEX[id];
+		if(typeof index === 'undefined') {
+			// index = 0;
+			// while(index < surflen && SURFACES[index].show === true) index++;
+			// if(index === surflen) {
+			// 	SURFACES.push(new SurfaceController());
+			// } else {
+			// 	var removedId = SURFACES[index].attr.id;
+			// 	ID_TO_INDEX[removedId] = undefined;
+			// }
+			// ID_TO_INDEX[id] = index;
+			// ----------
+			// 
+			index = SURFACES.length;
+			new SurfaceController({id:id});
+		}
+		return index;
+	}
+
+	/**
+	 * Return merged spec of a Surface.
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function SurfaceSpec(id){
+		var index = SurfaceIndex(id);
+		return merge.apply(null,getObjectValues(SURFACES[index].specs));
+	}
+
+	/**
+	 * Update specification of a Surface
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function SurfaceUpdate(value){
+		var index = SurfaceIndex(value.id);
+		SURFACES[index].update(value);
+	}
+
+
+	// for width and height
+	// we assume [0...1] are percentages
+	// while all other value are pixels
+	function getNumValue(val){		
+		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+	}
+
+	// object to array (to work with merge)
+	function getObjectValues(obj){
+		return Object.keys(obj).map(function(key){
+			return obj[key];
+		});
+	}
+
+	/**
+	 * Mithril SurfaceController
+	 *
+	 * Keeps state of a single element.
+	 *
+	 * input: 
+	 * 		this.specs: mapping from behavior => spec
+	 *
+	 * output:
+	 * 		id:    	 element id + Mithril key
+	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
+	 * 		element: Mithril Virtual DOM element string
+	 * 		content: Mithril Virtual DOM content
+	 *
+	 * A Surface listens to multiple specs.
+	 *
+	 * Every spec is called an "behavior".
+	 * All behaviors are merged into a single spec.
+	 * (See merge.js for how merging logic)
+	 *
+	 * public api:
+	 * 		.render(spec)
+	 */
+	function SurfaceController(options){
+		options = options || {};
+		this.matrix = mat4.create();
+		this.specs = {
+			'default':{
+				id: options.id,
+				show: options.show,
+				element: options.element || '.supermove-surface',
+				width: options.width || 0,
+				height: options.height || 0,
+				rotateX: options.rotateX || 0,
+				rotateY: options.rotateY || 0,
+				rotateZ: options.rotateZ || 0,
+				x: options.x || 0,
+				y: options.y || 0,
+				z: options.z || 0,
+				originX: options.originX || 0.5,
+				originY: options.originY || 0.5,
+				scaleX: options.scaleX || 1,
+				scaleY: options.scaleY || 1,
+				scaleZ: options.scaleZ || 1,
+				opacity: options.opacity || 1,
+				content: options.content
+			}
+		};
+		
+		this.show = options.show || false;
+		this.parent = options.parent || 'root';
+		this.element = '.supermove-surface';
+		this.attr = {
+		};
+		this.content = '';
+		
+		// global register
+		ID_TO_INDEX[options.id] = SURFACES.length;
+		SURFACES.push(this);
+		
+		this.update();
+	}
+
+	SurfaceController.prototype.update = function SurfaceUpdate(spec){
+		if(typeof spec === 'object') this.specs[spec.behavior || 'main'] = spec;
+
+		// merge specs into final spec.
+		spec = merge.apply(null,getObjectValues(this.specs));
+
+		// update state
+		if(spec.id){
+			this.attr.id = spec.id;
+			this.attr.key = spec.id;
+		} else {
+			delete this.attr.id;
+			delete this.attr.key;
+		}
+		if(spec.parent){
+			this.parent = spec.parent;
+		}
+		this.show  = spec.show; 		// For Container (to check if it's free)
+		//this.attr.style = .... 			// Mithril View: Style Attribute
+		this.element = spec.element;	// Mithril View: Virtual DOM element string
+		this.content = spec.content;	// Mithril View: Virtual DOM children / content
+
+		// display: none if invisible
+		if(spec.show !== true){
+			this.attr.style = "display: none;";
+			return;
+		}
+
+		// otherwise: calculate style
+		if(spec.opacity >= 1) spec.opacity = 0.99999;
+		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
+		// opacity is very low, otherwise Chrome will not render
+		// which can unpredicted cause flickering / rendering lag
+		// 
+		// We're assuming you have good reason to draw the surface,
+		// even when it's not visible.
+		//  - i.e. fast access (at the cost of more memory)
+		// 
+		// If you want to cleanup the node, set `show` to false
+		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
+		this.attr.style = "opacity: "+spec.opacity+"; ";
+
+		// matrix3d transform
+		var m = this.matrix;
+		mat4.identity(m);
+		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
+		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
+		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
+		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
+		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
+		this.attr.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
+		
+		// matrix3d transform origin
+		this.attr.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+' 0px; ';
+		
+		// width and height
+		if(spec.width){
+			this.attr.style += 'width: '+getNumValue(spec.width)+'; ';
+		}
+		if(spec.height){
+			this.attr.style += 'height: '+getNumValue(spec.height)+'; ';
+		}
+	};
+
+	/**
+	 * Mithril View to render a Surface
+	 *
+	 * Needs:
+	 * 	ctrl.id -- element ID and Mithril key (optional)
+	 * 	ctrl.element -- element string
+	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
+	 * 	ctrl.content -- virtual dom content.
+	 */
+	function SurfaceView(ctrl){
+		var content = (ctrl.content || []).concat(SURFACES.filter(function(surface){
+				return (surface.parent || 'root') === ctrl.attr.id;
+			}).map(SurfaceView));
+		
+		return m(ctrl.element,ctrl.attr,content);
+	}
+
+	module.exports = window.Surface = {
+		list: SURFACES,
+		spec: SurfaceSpec,
+		update: SurfaceUpdate,
+		controller: SurfaceController,
+		view: SurfaceView
+	};
 
 /***/ }
 /******/ ]);

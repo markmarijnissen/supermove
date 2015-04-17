@@ -28,6 +28,8 @@
 }
 
 .supermove-surface {
+    width: 100%;
+    height: 100%;
     position: absolute;
     -webkit-transform-origin: center center;
     transform-origin: center center;
