@@ -24,17 +24,6 @@ var ID_TO_INDEX = {};
 function SurfaceIndex(id){
 	var index = ID_TO_INDEX[id];
 	if(typeof index === 'undefined') {
-		// index = 0;
-		// while(index < surflen && SURFACES[index].show === true) index++;
-		// if(index === surflen) {
-		// 	SURFACES.push(new SurfaceController());
-		// } else {
-		// 	var removedId = SURFACES[index].attr.id;
-		// 	ID_TO_INDEX[removedId] = undefined;
-		// }
-		// ID_TO_INDEX[id] = index;
-		// ----------
-		// 
 		index = SURFACES.length;
 		new SurfaceController({id:id});
 	}
@@ -123,12 +112,8 @@ function SurfaceController(options){
 		}
 	};
 	
-	this.show = options.show || false;
-	this.parent = options.parent || 'root';
-	this.element = '.supermove-surface';
-	this.attr = {
-	};
-	this.content = '';
+	this.spec = {};
+	this.attr = {};
 	
 	// global register
 	ID_TO_INDEX[options.id] = SURFACES.length;
@@ -141,7 +126,7 @@ SurfaceController.prototype.update = function SurfaceUpdate(spec){
 	if(typeof spec === 'object') this.specs[spec.behavior || 'main'] = spec;
 
 	// merge specs into final spec.
-	spec = merge.apply(null,getObjectValues(this.specs));
+	this.spec = spec = merge.apply(null,getObjectValues(this.specs));
 
 	// update state
 	if(spec.id){
@@ -151,13 +136,6 @@ SurfaceController.prototype.update = function SurfaceUpdate(spec){
 		delete this.attr.id;
 		delete this.attr.key;
 	}
-	if(spec.parent){
-		this.parent = spec.parent;
-	}
-	this.show  = spec.show; 		// For Container (to check if it's free)
-	//this.attr.style = .... 			// Mithril View: Style Attribute
-	this.element = spec.element;	// Mithril View: Virtual DOM element string
-	this.content = spec.content;	// Mithril View: Virtual DOM children / content
 
 	// display: none if invisible
 	if(spec.show !== true){
@@ -211,15 +189,14 @@ SurfaceController.prototype.update = function SurfaceUpdate(spec){
  * 	ctrl.content -- virtual dom content.
  */
 function SurfaceView(ctrl){
-	var content = (ctrl.content || []).concat(SURFACES.filter(function(surface){
-			return (surface.parent || 'root') === ctrl.attr.id;
+	var content = (ctrl.spec.content || []).concat(SURFACES.filter(function(surface){
+		    return surface.spec.id !== ctrl.attr.id && (surface.spec.parent || 'root') === ctrl.attr.id;
 		}).map(SurfaceView));
 	
-	return m(ctrl.element,ctrl.attr,content);
+	return m(ctrl.spec.element,ctrl.attr,content);
 }
 
 module.exports = window.Surface = {
-	list: SURFACES,
 	spec: SurfaceSpec,
 	update: SurfaceUpdate,
 	controller: SurfaceController,

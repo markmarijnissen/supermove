@@ -1295,14 +1295,19 @@
 	 * Create a Supermove instance
 	 */
 	module.exports = function Supermove(el,options){
+		options = {
+			id: 'root',
+			parent:'root-container',
+			show: true
+		};
+
 		return m.mount(el,{
-			controller: Surface.controller.bind(Surface.controller,{
-				id: 'root',
-				parent:'root-container',
-				show: true
-			}),
+			controller: Surface.controller.bind(Surface.controller,options),
 			view: Surface.view
 		});
+
+		// who doesn't this work???
+		// return m.mount(el, m.component(Surface,options));
 	};
 
 
@@ -1377,17 +1382,6 @@
 						}
 						break;
 
-					case 'content':
-						if(destType === 'undefined'){
-							destVal = [];
-						} else if(!Array.isArray(destVal)){
-							destVal = [destVal];
-						}
-						if(!Array.isArray(srcVal)){
-							srcVal = [srcVal];
-						}
-						dest[key] = destVal.concat(srcVal);
-						break;
 					// for all other keys
 					default:
 						// + for numbers
@@ -1402,16 +1396,20 @@
 						} else if(srcType === 'boolean'){  
 							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
 						
-						// concat on arrays / other stuff
+						// concat into an array everything else
 						} else {
 							if(destType === 'undefined') {
 								destVal = [];
 							} else if(!Array.isArray(destVal)){
 								destVal = [destVal];
 							}
+							if(srcType === 'undefined') {
+								srcVal = [];
+							} else if(!Array.isArray(srcVal)){
+								srcVal = [srcVal];
+							}
 							dest[key] = destVal.concat(srcVal);
 						}
-						// objects and others are not supported...
 				}
 			}
 		}
@@ -1475,7 +1473,6 @@
 		.map(function(event){
 			return [event.target.innerWidth,event.target.innerHeight];
 		})
-		.merge(Kefir.constant(SIZE))
 		.toProperty(SIZE);
 
 /***/ },
@@ -6378,17 +6375,6 @@
 	function SurfaceIndex(id){
 		var index = ID_TO_INDEX[id];
 		if(typeof index === 'undefined') {
-			// index = 0;
-			// while(index < surflen && SURFACES[index].show === true) index++;
-			// if(index === surflen) {
-			// 	SURFACES.push(new SurfaceController());
-			// } else {
-			// 	var removedId = SURFACES[index].attr.id;
-			// 	ID_TO_INDEX[removedId] = undefined;
-			// }
-			// ID_TO_INDEX[id] = index;
-			// ----------
-			// 
 			index = SURFACES.length;
 			new SurfaceController({id:id});
 		}
@@ -6477,12 +6463,8 @@
 			}
 		};
 		
-		this.show = options.show || false;
-		this.parent = options.parent || 'root';
-		this.element = '.supermove-surface';
-		this.attr = {
-		};
-		this.content = '';
+		this.spec = {};
+		this.attr = {};
 		
 		// global register
 		ID_TO_INDEX[options.id] = SURFACES.length;
@@ -6495,7 +6477,7 @@
 		if(typeof spec === 'object') this.specs[spec.behavior || 'main'] = spec;
 
 		// merge specs into final spec.
-		spec = merge.apply(null,getObjectValues(this.specs));
+		this.spec = spec = merge.apply(null,getObjectValues(this.specs));
 
 		// update state
 		if(spec.id){
@@ -6505,13 +6487,6 @@
 			delete this.attr.id;
 			delete this.attr.key;
 		}
-		if(spec.parent){
-			this.parent = spec.parent;
-		}
-		this.show  = spec.show; 		// For Container (to check if it's free)
-		//this.attr.style = .... 			// Mithril View: Style Attribute
-		this.element = spec.element;	// Mithril View: Virtual DOM element string
-		this.content = spec.content;	// Mithril View: Virtual DOM children / content
 
 		// display: none if invisible
 		if(spec.show !== true){
@@ -6565,15 +6540,14 @@
 	 * 	ctrl.content -- virtual dom content.
 	 */
 	function SurfaceView(ctrl){
-		var content = (ctrl.content || []).concat(SURFACES.filter(function(surface){
-				return (surface.parent || 'root') === ctrl.attr.id;
+		var content = (ctrl.spec.content || []).concat(SURFACES.filter(function(surface){
+			    return surface.spec.id !== ctrl.attr.id && (surface.spec.parent || 'root') === ctrl.attr.id;
 			}).map(SurfaceView));
 		
-		return m(ctrl.element,ctrl.attr,content);
+		return m(ctrl.spec.element,ctrl.attr,content);
 	}
 
 	module.exports = window.Surface = {
-		list: SURFACES,
 		spec: SurfaceSpec,
 		update: SurfaceUpdate,
 		controller: SurfaceController,

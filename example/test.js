@@ -31,6 +31,8 @@ Kefir.combine([mouseX,animation],function(mouseX,animation){
 	.onValue(Supermove.update);
 	
 Supermove.resize
+	// whyy...?
+	.merge(Kefir.later(0,[window.innerWidth,window.innerHeight]))
 	.map(function(size){
 		return ['Incremental Rotation','Fixed Rotation','Relative Rotation to #1','Trigger Animation']
 			.map(function(text,id){

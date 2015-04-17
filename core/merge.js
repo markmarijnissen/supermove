@@ -65,17 +65,6 @@ module.exports = function merge(){
 					}
 					break;
 
-				case 'content':
-					if(destType === 'undefined'){
-						destVal = [];
-					} else if(!Array.isArray(destVal)){
-						destVal = [destVal];
-					}
-					if(!Array.isArray(srcVal)){
-						srcVal = [srcVal];
-					}
-					dest[key] = destVal.concat(srcVal);
-					break;
 				// for all other keys
 				default:
 					// + for numbers
@@ -90,16 +79,20 @@ module.exports = function merge(){
 					} else if(srcType === 'boolean'){  
 						dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
 					
-					// concat on arrays / other stuff
+					// concat into an array everything else
 					} else {
 						if(destType === 'undefined') {
 							destVal = [];
 						} else if(!Array.isArray(destVal)){
 							destVal = [destVal];
 						}
+						if(srcType === 'undefined') {
+							srcVal = [];
+						} else if(!Array.isArray(srcVal)){
+							srcVal = [srcVal];
+						}
 						dest[key] = destVal.concat(srcVal);
 					}
-					// objects and others are not supported...
 			}
 		}
 	}

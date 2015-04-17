@@ -45,22 +45,19 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(10);
-	__webpack_require__(12);
-	var DomEventStreamFactory = __webpack_require__(1);
+	__webpack_require__(13);
+	var Surface = __webpack_require__(1);
 	var Kefir = __webpack_require__(2);
 	var m = __webpack_require__(3);
 
-	var ContainerComponent = __webpack_require__(4);
-
-	var Supermove = __webpack_require__(5);
-	Supermove.merge = __webpack_require__(6);
-	Supermove.animate = __webpack_require__(7);
-	Supermove.resize = __webpack_require__(8);
-	Supermove.tween = __webpack_require__(9);
-	Supermove.container = ContainerComponent;
-	Supermove.update = ContainerComponent.update;
-	Supermove.spec = ContainerComponent.spec;
-	Supermove.event = DomEventStreamFactory(document.body);
+	var Supermove = __webpack_require__(4);
+	Supermove.merge = __webpack_require__(5);
+	Supermove.animate = __webpack_require__(6);
+	Supermove.resize = __webpack_require__(7);
+	Supermove.tween = __webpack_require__(8);
+	Supermove.update = Surface.update;
+	Supermove.spec = Surface.spec;
+	Supermove.event = __webpack_require__(9)(document.body);
 	Supermove.VERSION = ("0.3.0");
 
 	// Export to Window
@@ -79,7 +76,444 @@
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DomDelegate = __webpack_require__(17).Delegate;
+	var mat4 = __webpack_require__(12);
+	var merge = __webpack_require__(5);
+	var m = __webpack_require__(3);
+
+	/**
+	 * Every surface has an unique ID
+	 * A parent is a special surface, also has an unique ID
+	 *
+	 * - When updating specs, we need to find Surface corresponding to ID.
+	 * - When rendering, we need to find IDs that belong to surface
+	 * 
+	 * @type {Object}
+	 */
+	var SURFACES = [];
+	var ID_TO_INDEX = {};
+
+	/**
+	 * Convert Surface ID to an index in the Container.
+	 *
+	 * If Surface ID does not exist, it will fetch a
+	 * cached Surface. If there are no cached surfaces, 
+	 * it will create a new one.
+	 */
+	function SurfaceIndex(id){
+		var index = ID_TO_INDEX[id];
+		if(typeof index === 'undefined') {
+			index = SURFACES.length;
+			new SurfaceController({id:id});
+		}
+		return index;
+	}
+
+	/**
+	 * Return merged spec of a Surface.
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function SurfaceSpec(id){
+		var index = SurfaceIndex(id);
+		return merge.apply(null,getObjectValues(SURFACES[index].specs));
+	}
+
+	/**
+	 * Update specification of a Surface
+	 * Create Surface if ID does not have an index yet.
+	 */
+	function SurfaceUpdate(value){
+		var index = SurfaceIndex(value.id);
+		SURFACES[index].update(value);
+	}
+
+
+	// for width and height
+	// we assume [0...1] are percentages
+	// while all other value are pixels
+	function getNumValue(val){		
+		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
+	}
+
+	// object to array (to work with merge)
+	function getObjectValues(obj){
+		return Object.keys(obj).map(function(key){
+			return obj[key];
+		});
+	}
+
+	/**
+	 * Mithril SurfaceController
+	 *
+	 * Keeps state of a single element.
+	 *
+	 * input: 
+	 * 		this.specs: mapping from behavior => spec
+	 *
+	 * output:
+	 * 		id:    	 element id + Mithril key
+	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
+	 * 		element: Mithril Virtual DOM element string
+	 * 		content: Mithril Virtual DOM content
+	 *
+	 * A Surface listens to multiple specs.
+	 *
+	 * Every spec is called an "behavior".
+	 * All behaviors are merged into a single spec.
+	 * (See merge.js for how merging logic)
+	 *
+	 * public api:
+	 * 		.render(spec)
+	 */
+	function SurfaceController(options){
+		options = options || {};
+		this.matrix = mat4.create();
+		this.specs = {
+			'default':{
+				id: options.id,
+				show: options.show,
+				element: options.element || '.supermove-surface',
+				width: options.width || 0,
+				height: options.height || 0,
+				rotateX: options.rotateX || 0,
+				rotateY: options.rotateY || 0,
+				rotateZ: options.rotateZ || 0,
+				x: options.x || 0,
+				y: options.y || 0,
+				z: options.z || 0,
+				originX: options.originX || 0.5,
+				originY: options.originY || 0.5,
+				scaleX: options.scaleX || 1,
+				scaleY: options.scaleY || 1,
+				scaleZ: options.scaleZ || 1,
+				opacity: options.opacity || 1,
+				content: options.content
+			}
+		};
+		
+		this.spec = {};
+		this.attr = {};
+		
+		// global register
+		ID_TO_INDEX[options.id] = SURFACES.length;
+		SURFACES.push(this);
+		
+		this.update();
+	}
+
+	SurfaceController.prototype.update = function SurfaceUpdate(spec){
+		if(typeof spec === 'object') this.specs[spec.behavior || 'main'] = spec;
+
+		// merge specs into final spec.
+		this.spec = spec = merge.apply(null,getObjectValues(this.specs));
+
+		// update state
+		if(spec.id){
+			this.attr.id = spec.id;
+			this.attr.key = spec.id;
+		} else {
+			delete this.attr.id;
+			delete this.attr.key;
+		}
+
+		// display: none if invisible
+		if(spec.show !== true){
+			this.attr.style = "display: none;";
+			return;
+		}
+
+		// otherwise: calculate style
+		if(spec.opacity >= 1) spec.opacity = 0.99999;
+		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
+		// opacity is very low, otherwise Chrome will not render
+		// which can unpredicted cause flickering / rendering lag
+		// 
+		// We're assuming you have good reason to draw the surface,
+		// even when it's not visible.
+		//  - i.e. fast access (at the cost of more memory)
+		// 
+		// If you want to cleanup the node, set `show` to false
+		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
+		this.attr.style = "opacity: "+spec.opacity+"; ";
+
+		// matrix3d transform
+		var m = this.matrix;
+		mat4.identity(m);
+		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
+		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
+		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
+		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
+		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
+		this.attr.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
+		
+		// matrix3d transform origin
+		this.attr.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+' 0px; ';
+		
+		// width and height
+		if(spec.width){
+			this.attr.style += 'width: '+getNumValue(spec.width)+'; ';
+		}
+		if(spec.height){
+			this.attr.style += 'height: '+getNumValue(spec.height)+'; ';
+		}
+	};
+
+	/**
+	 * Mithril View to render a Surface
+	 *
+	 * Needs:
+	 * 	ctrl.id -- element ID and Mithril key (optional)
+	 * 	ctrl.element -- element string
+	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
+	 * 	ctrl.content -- virtual dom content.
+	 */
+	function SurfaceView(ctrl){
+		var content = (ctrl.spec.content || []).concat(SURFACES.filter(function(surface){
+			    return surface.spec.id !== ctrl.attr.id && (surface.spec.parent || 'root') === ctrl.attr.id;
+			}).map(SurfaceView));
+		
+		return m(ctrl.spec.element,ctrl.attr,content);
+	}
+
+	module.exports = window.Surface = {
+		spec: SurfaceSpec,
+		update: SurfaceUpdate,
+		controller: SurfaceController,
+		view: SurfaceView
+	};
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = window.Kefir;
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = window.m;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Surface = __webpack_require__(1);
+	var DomEventStreamFactory = __webpack_require__(9);
+
+	/**
+	 * Create a Supermove instance
+	 */
+	module.exports = function Supermove(el,options){
+		options = {
+			id: 'root',
+			parent:'root-container',
+			show: true
+		};
+
+		return m.mount(el,{
+			controller: Surface.controller.bind(Surface.controller,options),
+			view: Surface.view
+		});
+
+		// who doesn't this work???
+		// return m.mount(el, m.component(Surface,options));
+	};
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * merge multiple layout-specification into one.
+	 */
+	module.exports = function merge(){
+			// tmp vars for key,value,types of source and dest objects.
+		var key,srcVal,destVal,srcType,destType,
+			// destination is a fresh object
+			dest = {}, 
+			// merge all arguments
+			sources = Array.prototype.slice.call(arguments,0);
+		
+		// loop over all layout-specs (arguments)
+		for(var i = 0, len = sources.length; i < len; i++){
+			if(sources[i] === null) continue;
+			
+			// loop over all keys (attributes)
+			for(key in sources[i]){
+				// init values
+				srcVal = sources[i][key];
+				srcType = typeof srcVal;
+				destVal = dest[key];
+				destType = typeof destVal;
+
+				// merge-strategy is based on the key
+				switch(key){
+					// 'id' should be the same, otherwise error
+					case 'id':
+						if(destType !== 'undefined' && destVal !== srcVal){
+							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
+						}
+						dest[key] = srcVal;
+						break;
+					// 'parent' should be the same, otherwise error
+					case 'parent':
+						if(destType !== 'undefined' && destVal !== srcVal){
+							throw new Error('merging specs with different parents! ('+destVal+' != '+srcVal+')');
+						}
+						dest[key] = srcVal;
+						break;
+					// 'element' is added once (i.e. add class only once)
+					case 'element':
+						if(!destVal || destVal.indexOf(srcVal) < 0){
+							dest[key] = (destVal || '') + srcVal;
+						}
+						break;
+					// 'opacity' is multiplied
+					case 'opacity':
+						dest[key] = (destVal || 1) * srcVal;
+						break;
+
+					// width/height is multiplied (%) or added (px)
+					case 'width':
+					case 'height':
+						if(true){
+							if(srcType !== 'number'){
+								console.error('[dev] '+key+' is not a number!');
+							}
+						}
+						// * for percentages (value is 0..1)
+						if(srcVal <= 1.0 && srcVal >= 0.0) {
+							dest[key] = (destVal || 1) * srcVal;
+						// + for pixels
+						} else {
+							dest[key] = (destVal || 0) + srcVal;
+						}
+						break;
+
+					// for all other keys
+					default:
+						// + for numbers
+						if(srcType === 'number'){
+							dest[key] = (destVal || 0) + srcVal;
+						
+						// concat for strings
+						} else if(srcType === 'string'){
+							dest[key] = (destVal || '') + srcVal;
+
+						// && on booleans
+						} else if(srcType === 'boolean'){  
+							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
+						
+						// concat into an array everything else
+						} else {
+							if(destType === 'undefined') {
+								destVal = [];
+							} else if(!Array.isArray(destVal)){
+								destVal = [destVal];
+							}
+							if(srcType === 'undefined') {
+								srcVal = [];
+							} else if(!Array.isArray(srcVal)){
+								srcVal = [srcVal];
+							}
+							dest[key] = destVal.concat(srcVal);
+						}
+				}
+			}
+		}
+		return dest;
+	};
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Kefir = __webpack_require__(2);
+	var m = __webpack_require__(3);
+	var callbacks = [];
+
+	function step(time){
+		var len = callbacks.length;
+		if(len > 0){
+			for(var i = len-1; i >= 0; i--){
+				if(!callbacks[i].start) {
+					callbacks[i].start = time;
+				} 
+				if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
+					callbacks[i](1);
+					unsubscribe(callbacks[i]);
+				} else {
+					callbacks[i]((time - callbacks[i].start) / callbacks[i].duration);	
+				}
+			}
+			m.redraw(true);
+			window.requestAnimationFrame(step);
+		}
+	}
+
+	function createSubscribe(duration){
+		return function subscribe(callback){
+			var index = callbacks.length;
+			callbacks.push(callback);
+			callback.duration = duration || 1;
+			if(index === 0) window.requestAnimationFrame(step);
+		};
+	}
+
+	function unsubscribe(callback){
+		var index = callbacks.indexOf(callback);
+		if(index >= 0) callbacks.splice(index,1);
+	}
+
+	module.exports = function animate(duration){
+		return Kefir.fromSubUnsub(createSubscribe(duration),unsubscribe);
+	};
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Kefir = __webpack_require__(2);
+
+	var SIZE = [window.innerWidth,window.innerHeight];
+
+	module.exports = Kefir.fromEvent(window,'resize')
+		.map(function(event){
+			return [event.target.innerWidth,event.target.innerHeight];
+		})
+		.toProperty(SIZE);
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function tween(start,end,time){
+		if(typeof time === 'undefined') {
+			return tween.bind(null,start,end);
+		} else if(typeof start === 'object'){
+			var data = {};
+			for(var key in start){
+				if(key !== 'id') {
+					data[key] = tween(start[key],end[key],time);
+				} else {
+					data[key] = start[key] || end[key];
+				}
+			}
+			return data;
+		} else if(typeof start === 'number'){
+			return start + (end - start) * time;
+		} else {
+			return start || end;
+		}
+	};
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DomDelegate = __webpack_require__(16).Delegate;
 	var Kefir = __webpack_require__(2);
 
 	/**
@@ -133,312 +567,6 @@
 	module.exports = createDomEventStreamFactory;
 
 /***/ },
-/* 2 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = window.Kefir;
-
-/***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = window.m;
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Surface = __webpack_require__(13);
-	var merge = __webpack_require__(6);
-	var m = __webpack_require__(3);
-	var getObjectValues = __webpack_require__(14);
-
-	/**
-	 * Every surface has an unique ID
-	 * A container is a special surface, also has an unique ID
-	 *
-	 * - When updating specs, we need to find Surface corresponding to ID.
-	 * - When rendering, we need to find IDs that belong to surface
-	 * 
-	 * @type {Object}
-	 */
-	var SURFACES = [];
-	var ID_TO_INDEX = {};
-
-	/**
-	 * Convert Surface ID to an index in the Container.
-	 *
-	 * If Surface ID does not exist, it will fetch a
-	 * cached Surface. If there are no cached surfaces, 
-	 * it will create a new one.
-	 */
-	function ContainerIndex(id){
-		var index = ID_TO_INDEX[id], surflen = SURFACES.length;
-		if(typeof index === 'undefined') {
-			index = 0;
-			while(index < surflen && SURFACES[index].show === true) index++;
-			if(index === surflen) {
-				SURFACES.push(new SurfaceController());
-			} else {
-				var removedId = SURFACES[index].id;
-				ID_TO_INDEX[removedId] = undefined;
-			}
-			ID_TO_INDEX[id] = index;
-		}
-		return index;
-	}
-
-	/**
-	 * Return merged spec of a Surface.
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerSpec(id){
-		var index = ContainerIndex(id);
-		return merge.apply(null,getObjectValues(SURFACES[index].specs));
-	}
-
-	/**
-	 * Update specification of a Surface
-	 * Create Surface if ID does not have an index yet.
-	 */
-	function ContainerUpdate(value){
-		var index = ContainerIndex(value.id);
-		SURFACES[index].update(value);
-	}
-
-
-	function ContainerController(options){
-		var n = options.cache || 20;
-		this.container = options.container || 'root';
-		for(var i = 0; i<n; i++){
-			SURFACES.push(new Surface.controller());
-		}
-	}
-
-	function ContainerView(ctrl){
-		var surfaces = SURFACES.filter(function(surface){
-			return (surface.container || 'root') === ctrl.container;
-		});
-		return m('.supermove-container',surfaces.map(Surface.view));
-	}
-
-	/**
-	 * Mithril ContainerComponent
-	 *
-	 * A Virtual DOM Container to manage Surfaces.
-	 *
-	 * The ContainerComponent keeps a cache of DOM Nodes.
-	 * Every surface ID is mapped to an index in the DOM Cache.
-	 * If a Surface is invisible (i.e. show = false), it can
-	 * be reused by a new surface.
-	 */
-	module.exports = m.component({
-		spec: ContainerSpec,
-		update: ContainerUpdate,
-		controller: ContainerController,
-		view: ControllerView
-	});
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ContainerComponent = __webpack_require__(4);
-	var DomEventStreamFactory = __webpack_require__(1);
-
-	/**
-	 * Create a Supermove instance
-	 */
-	module.exports = function Supermove(el,options){
-		return m.mount(el,ContainerComponent(options));
-	};
-
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * merge multiple layout-specification into one.
-	 */
-	module.exports = function merge(){
-			// tmp vars for key,value,types of source and dest objects.
-		var key,srcVal,destVal,srcType,destType,
-			// destination is a fresh object
-			dest = {}, 
-			// merge all arguments
-			sources = Array.prototype.slice.call(arguments,0);
-		
-		// loop over all layout-specs (arguments)
-		for(var i = 0, len = sources.length; i < len; i++){
-			if(sources[i] === null) continue;
-			
-			// loop over all keys (attributes)
-			for(key in sources[i]){
-				// init values
-				srcVal = sources[i][key];
-				srcType = typeof srcVal;
-				destVal = dest[key];
-				destType = typeof destVal;
-
-				// merge-strategy is based on the key
-				switch(key){
-					// 'id' should be the same, otherwise error
-					case 'id':
-						if(destType !== 'undefined' && destVal !== srcVal){
-							throw new Error('merging specs with different IDs! ('+destVal+' != '+srcVal+')');
-						}
-						dest[key] = srcVal;
-						break;
-					// 'container' should be the same, otherwise error
-					case 'container':
-						if(destType !== 'undefined' && destVal !== srcVal){
-							throw new Error('merging specs with different containers! ('+destVal+' != '+srcVal+')');
-						}
-						dest[key] = srcVal;
-						break;
-					// 'element' is added once (i.e. add class only once)
-					case 'element':
-						if(!destVal || destVal.indexOf(srcVal) < 0){
-							dest[key] = (destVal || '') + srcVal;
-						}
-						break;
-					// 'opacity' is multiplied
-					case 'opacity':
-						dest[key] = (destVal || 1) * srcVal;
-						break;
-
-					// width/height is multiplied (%) or added (px)
-					case 'width':
-					case 'height':
-						if(true){
-							if(srcType !== 'number'){
-								console.error('[dev] '+key+' is not a number!');
-							}
-						}
-						// * for percentages (value is 0..1)
-						if(srcVal <= 1.0 && srcVal >= 0.0) {
-							dest[key] = (destVal || 1) * srcVal;
-						// + for pixels
-						} else {
-							dest[key] = (destVal || 0) + srcVal;
-						}
-						break;
-
-					// for all other keys
-					default:
-						// + for numbers
-						if(srcType === 'number'){
-							dest[key] = (destVal || 0) + srcVal;
-						
-						// concat for strings
-						} else if(srcType === 'string'){
-							dest[key] = (destVal || '') + srcVal;
-
-						// && on booleans
-						} else if(srcType === 'boolean'){  
-							dest[key] = destType === 'boolean'? destVal && srcVal: srcVal;
-						
-						// concat on arrays
-						} else if(Array.isArray(srcVal)){
-							if(destType === 'undefined') {
-								destVal = [];
-							} else if(!Array.isArray(destVal)){
-								destVal = [destVal];
-							}
-							dest[key] = destVal.concat(srcVal);
-						}
-						// objects and others are not supported...
-				}
-			}
-		}
-		return dest;
-	};
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Kefir = __webpack_require__(2);
-	var m = __webpack_require__(3);
-	var callbacks = [];
-
-	function step(time){
-		var len = callbacks.length;
-		if(len > 0){
-			for(var i = len-1; i >= 0; i--){
-				if(!callbacks[i].start) {
-					callbacks[i].start = time;
-				} 
-				if(callbacks[i].duration > 1 && time - callbacks[i].start > callbacks[i].duration){
-					callbacks[i](1);
-					unsubscribe(callbacks[i]);
-				} else {
-					callbacks[i]((time - callbacks[i].start) / callbacks[i].duration);	
-				}
-			}
-			m.redraw(true);
-			window.requestAnimationFrame(step);
-		}
-	}
-
-	function createSubscribe(duration){
-		return function subscribe(callback){
-			var index = callbacks.length;
-			callbacks.push(callback);
-			callback.duration = duration || 1;
-			if(index === 0) window.requestAnimationFrame(step);
-		};
-	}
-
-	function unsubscribe(callback){
-		var index = callbacks.indexOf(callback);
-		if(index >= 0) callbacks.splice(index,1);
-	}
-
-	module.exports = function animate(duration){
-		return Kefir.fromSubUnsub(createSubscribe(duration),unsubscribe);
-	};
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Kefir = __webpack_require__(2);
-
-	module.exports = Kefir.fromEvent(window,'resize')
-		.map(function(event){
-			return [event.target.innerWidth,event.target.innerHeight];
-		})
-		.toProperty([window.innerWidth,window.innerHeight]);
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function tween(start,end,time){
-		if(typeof time === 'undefined') {
-			return tween.bind(null,start,end);
-		} else if(typeof start === 'object'){
-			var data = {};
-			for(var key in start){
-				if(key !== 'id') {
-					data[key] = tween(start[key],end[key],time);
-				} else {
-					data[key] = start[key] || end[key];
-				}
-			}
-			return data;
-		} else if(typeof start === 'number'){
-			return start + (end - start) * time;
-		} else {
-			return start || end;
-		}
-	};
-
-
-/***/ },
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -448,7 +576,7 @@
 	var content = __webpack_require__(11);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(15)(content, {});
+	var update = __webpack_require__(14)(content, {});
 	// Hot Module Replacement
 	if(false) {
 		// When the styles change, update the <style> tags
@@ -465,11 +593,36 @@
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(16)();
-	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
+	exports = module.exports = __webpack_require__(15)();
+	exports.push([module.id, "\n.supermove-root {\n    width: 100%;\n    height: 100%;\n    margin: 0px;\n    padding: 0px;\n    opacity: .999999; /* ios8 hotfix */\n    overflow: hidden;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    perspective: 500px;\n}\n\n.supermove-container {\n    position: absolute;\n    top: 0px;\n    left: 0px;\n    bottom: 0px;\n    right: 0px;\n    overflow: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    pointer-events: none;\n    perspective: 1000px;\n    perspective-origin: 0 50%;\n}\n\n.supermove-surface {\n    width: 100%;\n    height: 100%;\n    position: absolute;\n    -webkit-transform-origin: center center;\n    transform-origin: center center;\n    -webkit-backface-visibility: visible;\n    backface-visibility: visible;\n    -webkit-transform-style: preserve-3d;\n    transform-style: preserve-3d;\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n    -webkit-tap-highlight-color: transparent;\n    pointer-events: auto;\n}", ""]);
 
 /***/ },
 /* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * This file imports the `mat4` file from the `gl-matrix` library.
+	 */
+
+	// Set gl-matrix common constants
+	window.GLMAT_EPSILON = 0.000001;
+	window.GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
+
+	// Import the actual library
+	var mat4 = __webpack_require__(17).mat4;
+
+	// Add method for style output (copied on mat4.str)
+	mat4.style = function (a) {
+	    return 'transform: matrix3d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
+	                    a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
+	                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
+	                    a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + '); ';
+	};
+
+	module.exports = mat4;
+
+/***/ },
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind
@@ -500,161 +653,7 @@
 
 
 /***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var mat4 = __webpack_require__(18);
-	var merge = __webpack_require__(6);
-	var getObjectValues = __webpack_require__(14);
-
-	// for width and height
-	// we assume [0...1] are percentages
-	// while all other value are pixels
-	function getNumValue(val){		
-		return val <= 1.0 && val >= 0.0? (val * 100)+'%': val+'px';
-	}
-
-	/**
-	 * Mithril SurfaceController
-	 *
-	 * Keeps state of a single element.
-	 *
-	 * input: 
-	 * 		this.specs: mapping from behavior => spec
-	 *
-	 * output:
-	 * 		id:    	 element id + Mithril key
-	 * 		show: 	 Visibility of element. When not shown, can be recycled by Container.
-	 * 		element: Mithril Virtual DOM element string
-	 * 		content: Mithril Virtual DOM content
-	 *
-	 * A Surface listens to multiple specs.
-	 *
-	 * Every spec is called an "behavior".
-	 * All behaviors are merged into a single spec.
-	 * (See merge.js for how merging logic)
-	 *
-	 * public api:
-	 * 		.render(spec)
-	 */
-	function SurfaceController(){
-		this.matrix = mat4.create();
-		this.specs = {
-			'default':{
-				element: '.supermove-surface',
-				width: 0,
-				height: 0,
-				rotateX: 0,
-				rotateY: 0,
-				rotateZ: 0,
-				x: 0,
-				y: 0,
-				z: 0,
-				originX: 0.5,
-				originY: 0.5,
-				scaleX: 1,
-				scaleY: 1,
-				scaleZ: 1,
-				opacity: 1,
-				content: ''
-			}
-		};
-
-		this.show = false;
-		this.content = '';
-		this.element = '.supermove-surface';
-	}
-
-	SurfaceController.prototype.update = function SurfaceUpdate(spec){
-		this.specs[spec.behavior || 'main'] = spec;
-	};
-
-	SurfaceController.prototype.calculateStyle = function(){
-		// merge specs into final spec.
-		var spec = merge.apply(null,getObjectValues(this.specs));
-		
-		// update state
-		this.id = spec.id;				// Mithril View: key + id
-		this.show  = spec.show; 		// For Container (to check if it's free)
-		//this.style = .... 			// Mithril View: Style Attribute
-		this.element = spec.element;	// Mithril View: Virtual DOM element string
-		this.content = spec.content;	// Mithril View: Virtual DOM children / content
-
-		// display: none if invisible
-		if(spec.show !== true){
-			this.style = "display: none;";
-			return;
-		}
-
-		// otherwise: calculate style
-		if(spec.opacity >= 1) spec.opacity = 0.99999;
-		else if(spec.opacity <= 0) spec.opacity = 0.00001; 
-		// opacity is very low, otherwise Chrome will not render
-		// which can unpredicted cause flickering / rendering lag
-		// 
-		// We're assuming you have good reason to draw the surface,
-		// even when it's not visible.
-		//  - i.e. fast access (at the cost of more memory)
-		// 
-		// If you want to cleanup the node, set `show` to false
-		//  - i.e. slower acccess (at the cost of more free dom nodes and memory)
-		this.style = "opacity: "+spec.opacity+"; ";
-
-		// matrix3d transform
-		var m = this.matrix;
-		mat4.identity(m);
-		mat4.translate(m,m,[spec.x,spec.y,spec.z]);
-		if(spec.rotateX) mat4.rotateX(m,m,spec.rotateX);
-		if(spec.rotateY) mat4.rotateY(m,m,spec.rotateY);
-		if(spec.rotateZ) mat4.rotateZ(m,m,spec.rotateZ);
-		mat4.scale(m,m,[spec.scaleX,spec.scaleY,spec.scaleZ]);
-		this.style += mat4.str(m).replace('mat4','transform: matrix3d')+'; ';
-		
-		// matrix3d transform origin
-		this.style += 'transform-origin: '+getNumValue(spec.originX)+' '+getNumValue(spec.originY)+'% 0px; ';
-		
-		// width and height
-		if(spec.width){
-			this.style += 'width: '+getNumValue(spec.width)+'; ';
-		}
-		if(spec.height){
-			this.style += 'height: '+getNumValue(spec.height)+'; ';
-		}
-	};
-
-	/**
-	 * Mithril View to render a Surface
-	 *
-	 * Needs:
-	 * 	ctrl.id -- element ID and Mithril key (optional)
-	 * 	ctrl.element -- element string
-	 * 	ctrl.style -- style as calculated by .calculateStyle() from all specs.
-	 * 	ctrl.content -- virtual dom content.
-	 */
-	function SurfaceView(ctrl){
-		ctrl.calculateStyle();
-		var attr = ctrl.id?{'style': ctrl.style, id: ctrl.id, key: ctrl.id }:{'style': ctrl.style };
-		return m(ctrl.element,attr,ctrl.content);
-	}
-
-	module.exports = {
-		controller: SurfaceController,
-		view: SurfaceView
-	};
-
-/***/ },
 /* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// object to array (to work with merge)
-	module.exports = function getObjectValues(obj){
-		return Object.keys(obj).map(function(key){
-			return obj[key];
-		});
-	};
-
-/***/ },
-/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -850,7 +849,7 @@
 
 
 /***/ },
-/* 16 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function() {
@@ -871,7 +870,7 @@
 	}
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*jshint browser:true, node:true*/
@@ -886,7 +885,7 @@
 	 * @copyright The Financial Times Limited [All Rights Reserved]
 	 * @license MIT License (see LICENSE.txt)
 	 */
-	var Delegate = __webpack_require__(19);
+	var Delegate = __webpack_require__(18);
 
 	module.exports = function(root) {
 	  return new Delegate(root);
@@ -896,467 +895,7 @@
 
 
 /***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * This file imports the `mat4` file from the `gl-matrix` library.
-	 */
-
-	// Set gl-matrix common constants
-	window.GLMAT_EPSILON = 0.000001;
-	window.GLMAT_ARRAY_TYPE = (typeof Float32Array !== 'undefined') ? Float32Array : Array;
-
-	// Import the actual library
-	var mat4 = __webpack_require__(20).mat4;
-
-	// Add method for style output (copied on mat4.str)
-	mat4.style = function (a) {
-	    return 'transform: matrix3d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
-	                    a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
-	                    a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
-	                    a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + '); ';
-	};
-
-	module.exports = mat4;
-
-/***/ },
-/* 19 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*jshint browser:true, node:true*/
-
-	'use strict';
-
-	module.exports = Delegate;
-
-	/**
-	 * DOM event delegator
-	 *
-	 * The delegator will listen
-	 * for events that bubble up
-	 * to the root node.
-	 *
-	 * @constructor
-	 * @param {Node|string} [root] The root node or a selector string matching the root node
-	 */
-	function Delegate(root) {
-
-	  /**
-	   * Maintain a map of listener
-	   * lists, keyed by event name.
-	   *
-	   * @type Object
-	   */
-	  this.listenerMap = [{}, {}];
-	  if (root) {
-	    this.root(root);
-	  }
-
-	  /** @type function() */
-	  this.handle = Delegate.prototype.handle.bind(this);
-	}
-
-	/**
-	 * Start listening for events
-	 * on the provided DOM element
-	 *
-	 * @param  {Node|string} [root] The root node or a selector string matching the root node
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.root = function(root) {
-	  var listenerMap = this.listenerMap;
-	  var eventType;
-
-	  // Remove master event listeners
-	  if (this.rootElement) {
-	    for (eventType in listenerMap[1]) {
-	      if (listenerMap[1].hasOwnProperty(eventType)) {
-	        this.rootElement.removeEventListener(eventType, this.handle, true);
-	      }
-	    }
-	    for (eventType in listenerMap[0]) {
-	      if (listenerMap[0].hasOwnProperty(eventType)) {
-	        this.rootElement.removeEventListener(eventType, this.handle, false);
-	      }
-	    }
-	  }
-
-	  // If no root or root is not
-	  // a dom node, then remove internal
-	  // root reference and exit here
-	  if (!root || !root.addEventListener) {
-	    if (this.rootElement) {
-	      delete this.rootElement;
-	    }
-	    return this;
-	  }
-
-	  /**
-	   * The root node at which
-	   * listeners are attached.
-	   *
-	   * @type Node
-	   */
-	  this.rootElement = root;
-
-	  // Set up master event listeners
-	  for (eventType in listenerMap[1]) {
-	    if (listenerMap[1].hasOwnProperty(eventType)) {
-	      this.rootElement.addEventListener(eventType, this.handle, true);
-	    }
-	  }
-	  for (eventType in listenerMap[0]) {
-	    if (listenerMap[0].hasOwnProperty(eventType)) {
-	      this.rootElement.addEventListener(eventType, this.handle, false);
-	    }
-	  }
-
-	  return this;
-	};
-
-	/**
-	 * @param {string} eventType
-	 * @returns boolean
-	 */
-	Delegate.prototype.captureForType = function(eventType) {
-	  return ['blur', 'error', 'focus', 'load', 'resize', 'scroll'].indexOf(eventType) !== -1;
-	};
-
-	/**
-	 * Attach a handler to one
-	 * event for all elements
-	 * that match the selector,
-	 * now or in the future
-	 *
-	 * The handler function receives
-	 * three arguments: the DOM event
-	 * object, the node that matched
-	 * the selector while the event
-	 * was bubbling and a reference
-	 * to itself. Within the handler,
-	 * 'this' is equal to the second
-	 * argument.
-	 *
-	 * The node that actually received
-	 * the event can be accessed via
-	 * 'event.target'.
-	 *
-	 * @param {string} eventType Listen for these events
-	 * @param {string|undefined} selector Only handle events on elements matching this selector, if undefined match root element
-	 * @param {function()} handler Handler function - event data passed here will be in event.data
-	 * @param {Object} [eventData] Data to pass in event.data
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.on = function(eventType, selector, handler, useCapture) {
-	  var root, listenerMap, matcher, matcherParam;
-
-	  if (!eventType) {
-	    throw new TypeError('Invalid event type: ' + eventType);
-	  }
-
-	  // handler can be passed as
-	  // the second or third argument
-	  if (typeof selector === 'function') {
-	    useCapture = handler;
-	    handler = selector;
-	    selector = null;
-	  }
-
-	  // Fallback to sensible defaults
-	  // if useCapture not set
-	  if (useCapture === undefined) {
-	    useCapture = this.captureForType(eventType);
-	  }
-
-	  if (typeof handler !== 'function') {
-	    throw new TypeError('Handler must be a type of Function');
-	  }
-
-	  root = this.rootElement;
-	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
-
-	  // Add master handler for type if not created yet
-	  if (!listenerMap[eventType]) {
-	    if (root) {
-	      root.addEventListener(eventType, this.handle, useCapture);
-	    }
-	    listenerMap[eventType] = [];
-	  }
-
-	  if (!selector) {
-	    matcherParam = null;
-
-	    // COMPLEX - matchesRoot needs to have access to
-	    // this.rootElement, so bind the function to this.
-	    matcher = matchesRoot.bind(this);
-
-	  // Compile a matcher for the given selector
-	  } else if (/^[a-z]+$/i.test(selector)) {
-	    matcherParam = selector;
-	    matcher = matchesTag;
-	  } else if (/^#[a-z0-9\-_]+$/i.test(selector)) {
-	    matcherParam = selector.slice(1);
-	    matcher = matchesId;
-	  } else {
-	    matcherParam = selector;
-	    matcher = matches;
-	  }
-
-	  // Add to the list of listeners
-	  listenerMap[eventType].push({
-	    selector: selector,
-	    handler: handler,
-	    matcher: matcher,
-	    matcherParam: matcherParam
-	  });
-
-	  return this;
-	};
-
-	/**
-	 * Remove an event handler
-	 * for elements that match
-	 * the selector, forever
-	 *
-	 * @param {string} [eventType] Remove handlers for events matching this type, considering the other parameters
-	 * @param {string} [selector] If this parameter is omitted, only handlers which match the other two will be removed
-	 * @param {function()} [handler] If this parameter is omitted, only handlers which match the previous two will be removed
-	 * @returns {Delegate} This method is chainable
-	 */
-	Delegate.prototype.off = function(eventType, selector, handler, useCapture) {
-	  var i, listener, listenerMap, listenerList, singleEventType;
-
-	  // Handler can be passed as
-	  // the second or third argument
-	  if (typeof selector === 'function') {
-	    useCapture = handler;
-	    handler = selector;
-	    selector = null;
-	  }
-
-	  // If useCapture not set, remove
-	  // all event listeners
-	  if (useCapture === undefined) {
-	    this.off(eventType, selector, handler, true);
-	    this.off(eventType, selector, handler, false);
-	    return this;
-	  }
-
-	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
-	  if (!eventType) {
-	    for (singleEventType in listenerMap) {
-	      if (listenerMap.hasOwnProperty(singleEventType)) {
-	        this.off(singleEventType, selector, handler);
-	      }
-	    }
-
-	    return this;
-	  }
-
-	  listenerList = listenerMap[eventType];
-	  if (!listenerList || !listenerList.length) {
-	    return this;
-	  }
-
-	  // Remove only parameter matches
-	  // if specified
-	  for (i = listenerList.length - 1; i >= 0; i--) {
-	    listener = listenerList[i];
-
-	    if ((!selector || selector === listener.selector) && (!handler || handler === listener.handler)) {
-	      listenerList.splice(i, 1);
-	    }
-	  }
-
-	  // All listeners removed
-	  if (!listenerList.length) {
-	    delete listenerMap[eventType];
-
-	    // Remove the main handler
-	    if (this.rootElement) {
-	      this.rootElement.removeEventListener(eventType, this.handle, useCapture);
-	    }
-	  }
-
-	  return this;
-	};
-
-
-	/**
-	 * Handle an arbitrary event.
-	 *
-	 * @param {Event} event
-	 */
-	Delegate.prototype.handle = function(event) {
-	  var i, l, type = event.type, root, phase, listener, returned, listenerList = [], target, /** @const */ EVENTIGNORE = 'ftLabsDelegateIgnore';
-
-	  if (event[EVENTIGNORE] === true) {
-	    return;
-	  }
-
-	  target = event.target;
-
-	  // Hardcode value of Node.TEXT_NODE
-	  // as not defined in IE8
-	  if (target.nodeType === 3) {
-	    target = target.parentNode;
-	  }
-
-	  root = this.rootElement;
-
-	  phase = event.eventPhase || ( event.target !== event.currentTarget ? 3 : 2 );
-	  
-	  switch (phase) {
-	    case 1: //Event.CAPTURING_PHASE:
-	      listenerList = this.listenerMap[1][type];
-	    break;
-	    case 2: //Event.AT_TARGET:
-	      if (this.listenerMap[0] && this.listenerMap[0][type]) listenerList = listenerList.concat(this.listenerMap[0][type]);
-	      if (this.listenerMap[1] && this.listenerMap[1][type]) listenerList = listenerList.concat(this.listenerMap[1][type]);
-	    break;
-	    case 3: //Event.BUBBLING_PHASE:
-	      listenerList = this.listenerMap[0][type];
-	    break;
-	  }
-
-	  // Need to continuously check
-	  // that the specific list is
-	  // still populated in case one
-	  // of the callbacks actually
-	  // causes the list to be destroyed.
-	  l = listenerList.length;
-	  while (target && l) {
-	    for (i = 0; i < l; i++) {
-	      listener = listenerList[i];
-
-	      // Bail from this loop if
-	      // the length changed and
-	      // no more listeners are
-	      // defined between i and l.
-	      if (!listener) {
-	        break;
-	      }
-
-	      // Check for match and fire
-	      // the event if there's one
-	      //
-	      // TODO:MCG:20120117: Need a way
-	      // to check if event#stopImmediatePropagation
-	      // was called. If so, break both loops.
-	      if (listener.matcher.call(target, listener.matcherParam, target)) {
-	        returned = this.fire(event, target, listener);
-	      }
-
-	      // Stop propagation to subsequent
-	      // callbacks if the callback returned
-	      // false
-	      if (returned === false) {
-	        event[EVENTIGNORE] = true;
-	        event.preventDefault();
-	        return;
-	      }
-	    }
-
-	    // TODO:MCG:20120117: Need a way to
-	    // check if event#stopPropagation
-	    // was called. If so, break looping
-	    // through the DOM. Stop if the
-	    // delegation root has been reached
-	    if (target === root) {
-	      break;
-	    }
-
-	    l = listenerList.length;
-	    target = target.parentElement;
-	  }
-	};
-
-	/**
-	 * Fire a listener on a target.
-	 *
-	 * @param {Event} event
-	 * @param {Node} target
-	 * @param {Object} listener
-	 * @returns {boolean}
-	 */
-	Delegate.prototype.fire = function(event, target, listener) {
-	  return listener.handler.call(target, event, target);
-	};
-
-	/**
-	 * Check whether an element
-	 * matches a generic selector.
-	 *
-	 * @type function()
-	 * @param {string} selector A CSS selector
-	 */
-	var matches = (function(el) {
-	  if (!el) return;
-	  var p = el.prototype;
-	  return (p.matches || p.matchesSelector || p.webkitMatchesSelector || p.mozMatchesSelector || p.msMatchesSelector || p.oMatchesSelector);
-	}(Element));
-
-	/**
-	 * Check whether an element
-	 * matches a tag selector.
-	 *
-	 * Tags are NOT case-sensitive,
-	 * except in XML (and XML-based
-	 * languages such as XHTML).
-	 *
-	 * @param {string} tagName The tag name to test against
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesTag(tagName, element) {
-	  return tagName.toLowerCase() === element.tagName.toLowerCase();
-	}
-
-	/**
-	 * Check whether an element
-	 * matches the root.
-	 *
-	 * @param {?String} selector In this case this is always passed through as null and not used
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesRoot(selector, element) {
-	  /*jshint validthis:true*/
-	  if (this.rootElement === window) return element === document;
-	  return this.rootElement === element;
-	}
-
-	/**
-	 * Check whether the ID of
-	 * the element in 'this'
-	 * matches the given ID.
-	 *
-	 * IDs are case-sensitive.
-	 *
-	 * @param {string} id The ID to test against
-	 * @param {Element} element The element to test with
-	 * @returns boolean
-	 */
-	function matchesId(id, element) {
-	  return id === element.id;
-	}
-
-	/**
-	 * Short hand for off()
-	 * and root(), ie both
-	 * with no parameters
-	 *
-	 * @return void
-	 */
-	Delegate.prototype.destroy = function() {
-	  this.off();
-	  this.root();
-	};
-
-
-/***/ },
-/* 20 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
@@ -2273,6 +1812,441 @@
 	if(true) {
 	    exports.mat4 = mat4;
 	}
+
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*jshint browser:true, node:true*/
+
+	'use strict';
+
+	module.exports = Delegate;
+
+	/**
+	 * DOM event delegator
+	 *
+	 * The delegator will listen
+	 * for events that bubble up
+	 * to the root node.
+	 *
+	 * @constructor
+	 * @param {Node|string} [root] The root node or a selector string matching the root node
+	 */
+	function Delegate(root) {
+
+	  /**
+	   * Maintain a map of listener
+	   * lists, keyed by event name.
+	   *
+	   * @type Object
+	   */
+	  this.listenerMap = [{}, {}];
+	  if (root) {
+	    this.root(root);
+	  }
+
+	  /** @type function() */
+	  this.handle = Delegate.prototype.handle.bind(this);
+	}
+
+	/**
+	 * Start listening for events
+	 * on the provided DOM element
+	 *
+	 * @param  {Node|string} [root] The root node or a selector string matching the root node
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.root = function(root) {
+	  var listenerMap = this.listenerMap;
+	  var eventType;
+
+	  // Remove master event listeners
+	  if (this.rootElement) {
+	    for (eventType in listenerMap[1]) {
+	      if (listenerMap[1].hasOwnProperty(eventType)) {
+	        this.rootElement.removeEventListener(eventType, this.handle, true);
+	      }
+	    }
+	    for (eventType in listenerMap[0]) {
+	      if (listenerMap[0].hasOwnProperty(eventType)) {
+	        this.rootElement.removeEventListener(eventType, this.handle, false);
+	      }
+	    }
+	  }
+
+	  // If no root or root is not
+	  // a dom node, then remove internal
+	  // root reference and exit here
+	  if (!root || !root.addEventListener) {
+	    if (this.rootElement) {
+	      delete this.rootElement;
+	    }
+	    return this;
+	  }
+
+	  /**
+	   * The root node at which
+	   * listeners are attached.
+	   *
+	   * @type Node
+	   */
+	  this.rootElement = root;
+
+	  // Set up master event listeners
+	  for (eventType in listenerMap[1]) {
+	    if (listenerMap[1].hasOwnProperty(eventType)) {
+	      this.rootElement.addEventListener(eventType, this.handle, true);
+	    }
+	  }
+	  for (eventType in listenerMap[0]) {
+	    if (listenerMap[0].hasOwnProperty(eventType)) {
+	      this.rootElement.addEventListener(eventType, this.handle, false);
+	    }
+	  }
+
+	  return this;
+	};
+
+	/**
+	 * @param {string} eventType
+	 * @returns boolean
+	 */
+	Delegate.prototype.captureForType = function(eventType) {
+	  return ['blur', 'error', 'focus', 'load', 'resize', 'scroll'].indexOf(eventType) !== -1;
+	};
+
+	/**
+	 * Attach a handler to one
+	 * event for all elements
+	 * that match the selector,
+	 * now or in the future
+	 *
+	 * The handler function receives
+	 * three arguments: the DOM event
+	 * object, the node that matched
+	 * the selector while the event
+	 * was bubbling and a reference
+	 * to itself. Within the handler,
+	 * 'this' is equal to the second
+	 * argument.
+	 *
+	 * The node that actually received
+	 * the event can be accessed via
+	 * 'event.target'.
+	 *
+	 * @param {string} eventType Listen for these events
+	 * @param {string|undefined} selector Only handle events on elements matching this selector, if undefined match root element
+	 * @param {function()} handler Handler function - event data passed here will be in event.data
+	 * @param {Object} [eventData] Data to pass in event.data
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.on = function(eventType, selector, handler, useCapture) {
+	  var root, listenerMap, matcher, matcherParam;
+
+	  if (!eventType) {
+	    throw new TypeError('Invalid event type: ' + eventType);
+	  }
+
+	  // handler can be passed as
+	  // the second or third argument
+	  if (typeof selector === 'function') {
+	    useCapture = handler;
+	    handler = selector;
+	    selector = null;
+	  }
+
+	  // Fallback to sensible defaults
+	  // if useCapture not set
+	  if (useCapture === undefined) {
+	    useCapture = this.captureForType(eventType);
+	  }
+
+	  if (typeof handler !== 'function') {
+	    throw new TypeError('Handler must be a type of Function');
+	  }
+
+	  root = this.rootElement;
+	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
+
+	  // Add master handler for type if not created yet
+	  if (!listenerMap[eventType]) {
+	    if (root) {
+	      root.addEventListener(eventType, this.handle, useCapture);
+	    }
+	    listenerMap[eventType] = [];
+	  }
+
+	  if (!selector) {
+	    matcherParam = null;
+
+	    // COMPLEX - matchesRoot needs to have access to
+	    // this.rootElement, so bind the function to this.
+	    matcher = matchesRoot.bind(this);
+
+	  // Compile a matcher for the given selector
+	  } else if (/^[a-z]+$/i.test(selector)) {
+	    matcherParam = selector;
+	    matcher = matchesTag;
+	  } else if (/^#[a-z0-9\-_]+$/i.test(selector)) {
+	    matcherParam = selector.slice(1);
+	    matcher = matchesId;
+	  } else {
+	    matcherParam = selector;
+	    matcher = matches;
+	  }
+
+	  // Add to the list of listeners
+	  listenerMap[eventType].push({
+	    selector: selector,
+	    handler: handler,
+	    matcher: matcher,
+	    matcherParam: matcherParam
+	  });
+
+	  return this;
+	};
+
+	/**
+	 * Remove an event handler
+	 * for elements that match
+	 * the selector, forever
+	 *
+	 * @param {string} [eventType] Remove handlers for events matching this type, considering the other parameters
+	 * @param {string} [selector] If this parameter is omitted, only handlers which match the other two will be removed
+	 * @param {function()} [handler] If this parameter is omitted, only handlers which match the previous two will be removed
+	 * @returns {Delegate} This method is chainable
+	 */
+	Delegate.prototype.off = function(eventType, selector, handler, useCapture) {
+	  var i, listener, listenerMap, listenerList, singleEventType;
+
+	  // Handler can be passed as
+	  // the second or third argument
+	  if (typeof selector === 'function') {
+	    useCapture = handler;
+	    handler = selector;
+	    selector = null;
+	  }
+
+	  // If useCapture not set, remove
+	  // all event listeners
+	  if (useCapture === undefined) {
+	    this.off(eventType, selector, handler, true);
+	    this.off(eventType, selector, handler, false);
+	    return this;
+	  }
+
+	  listenerMap = this.listenerMap[useCapture ? 1 : 0];
+	  if (!eventType) {
+	    for (singleEventType in listenerMap) {
+	      if (listenerMap.hasOwnProperty(singleEventType)) {
+	        this.off(singleEventType, selector, handler);
+	      }
+	    }
+
+	    return this;
+	  }
+
+	  listenerList = listenerMap[eventType];
+	  if (!listenerList || !listenerList.length) {
+	    return this;
+	  }
+
+	  // Remove only parameter matches
+	  // if specified
+	  for (i = listenerList.length - 1; i >= 0; i--) {
+	    listener = listenerList[i];
+
+	    if ((!selector || selector === listener.selector) && (!handler || handler === listener.handler)) {
+	      listenerList.splice(i, 1);
+	    }
+	  }
+
+	  // All listeners removed
+	  if (!listenerList.length) {
+	    delete listenerMap[eventType];
+
+	    // Remove the main handler
+	    if (this.rootElement) {
+	      this.rootElement.removeEventListener(eventType, this.handle, useCapture);
+	    }
+	  }
+
+	  return this;
+	};
+
+
+	/**
+	 * Handle an arbitrary event.
+	 *
+	 * @param {Event} event
+	 */
+	Delegate.prototype.handle = function(event) {
+	  var i, l, type = event.type, root, phase, listener, returned, listenerList = [], target, /** @const */ EVENTIGNORE = 'ftLabsDelegateIgnore';
+
+	  if (event[EVENTIGNORE] === true) {
+	    return;
+	  }
+
+	  target = event.target;
+
+	  // Hardcode value of Node.TEXT_NODE
+	  // as not defined in IE8
+	  if (target.nodeType === 3) {
+	    target = target.parentNode;
+	  }
+
+	  root = this.rootElement;
+
+	  phase = event.eventPhase || ( event.target !== event.currentTarget ? 3 : 2 );
+	  
+	  switch (phase) {
+	    case 1: //Event.CAPTURING_PHASE:
+	      listenerList = this.listenerMap[1][type];
+	    break;
+	    case 2: //Event.AT_TARGET:
+	      if (this.listenerMap[0] && this.listenerMap[0][type]) listenerList = listenerList.concat(this.listenerMap[0][type]);
+	      if (this.listenerMap[1] && this.listenerMap[1][type]) listenerList = listenerList.concat(this.listenerMap[1][type]);
+	    break;
+	    case 3: //Event.BUBBLING_PHASE:
+	      listenerList = this.listenerMap[0][type];
+	    break;
+	  }
+
+	  // Need to continuously check
+	  // that the specific list is
+	  // still populated in case one
+	  // of the callbacks actually
+	  // causes the list to be destroyed.
+	  l = listenerList.length;
+	  while (target && l) {
+	    for (i = 0; i < l; i++) {
+	      listener = listenerList[i];
+
+	      // Bail from this loop if
+	      // the length changed and
+	      // no more listeners are
+	      // defined between i and l.
+	      if (!listener) {
+	        break;
+	      }
+
+	      // Check for match and fire
+	      // the event if there's one
+	      //
+	      // TODO:MCG:20120117: Need a way
+	      // to check if event#stopImmediatePropagation
+	      // was called. If so, break both loops.
+	      if (listener.matcher.call(target, listener.matcherParam, target)) {
+	        returned = this.fire(event, target, listener);
+	      }
+
+	      // Stop propagation to subsequent
+	      // callbacks if the callback returned
+	      // false
+	      if (returned === false) {
+	        event[EVENTIGNORE] = true;
+	        event.preventDefault();
+	        return;
+	      }
+	    }
+
+	    // TODO:MCG:20120117: Need a way to
+	    // check if event#stopPropagation
+	    // was called. If so, break looping
+	    // through the DOM. Stop if the
+	    // delegation root has been reached
+	    if (target === root) {
+	      break;
+	    }
+
+	    l = listenerList.length;
+	    target = target.parentElement;
+	  }
+	};
+
+	/**
+	 * Fire a listener on a target.
+	 *
+	 * @param {Event} event
+	 * @param {Node} target
+	 * @param {Object} listener
+	 * @returns {boolean}
+	 */
+	Delegate.prototype.fire = function(event, target, listener) {
+	  return listener.handler.call(target, event, target);
+	};
+
+	/**
+	 * Check whether an element
+	 * matches a generic selector.
+	 *
+	 * @type function()
+	 * @param {string} selector A CSS selector
+	 */
+	var matches = (function(el) {
+	  if (!el) return;
+	  var p = el.prototype;
+	  return (p.matches || p.matchesSelector || p.webkitMatchesSelector || p.mozMatchesSelector || p.msMatchesSelector || p.oMatchesSelector);
+	}(Element));
+
+	/**
+	 * Check whether an element
+	 * matches a tag selector.
+	 *
+	 * Tags are NOT case-sensitive,
+	 * except in XML (and XML-based
+	 * languages such as XHTML).
+	 *
+	 * @param {string} tagName The tag name to test against
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesTag(tagName, element) {
+	  return tagName.toLowerCase() === element.tagName.toLowerCase();
+	}
+
+	/**
+	 * Check whether an element
+	 * matches the root.
+	 *
+	 * @param {?String} selector In this case this is always passed through as null and not used
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesRoot(selector, element) {
+	  /*jshint validthis:true*/
+	  if (this.rootElement === window) return element === document;
+	  return this.rootElement === element;
+	}
+
+	/**
+	 * Check whether the ID of
+	 * the element in 'this'
+	 * matches the given ID.
+	 *
+	 * IDs are case-sensitive.
+	 *
+	 * @param {string} id The ID to test against
+	 * @param {Element} element The element to test with
+	 * @returns boolean
+	 */
+	function matchesId(id, element) {
+	  return id === element.id;
+	}
+
+	/**
+	 * Short hand for off()
+	 * and root(), ie both
+	 * with no parameters
+	 *
+	 * @return void
+	 */
+	Delegate.prototype.destroy = function() {
+	  this.off();
+	  this.root();
+	};
 
 
 /***/ }
